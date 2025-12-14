@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Custom theme using Tailwind 4 CSS variables */
+@theme {
+  /* Rust-inspired colors */
+  --color-rust-50: oklch(0.97 0.02 55);
+  --color-rust-100: oklch(0.93 0.04 55);
+  --color-rust-200: oklch(0.87 0.08 50);
+  --color-rust-300: oklch(0.78 0.12 45);
+  --color-rust-400: oklch(0.68 0.16 40);
+  --color-rust-500: oklch(0.60 0.18 35);
+  --color-rust-600: oklch(0.52 0.17 32);
+  --color-rust-700: oklch(0.45 0.15 30);
+  --color-rust-800: oklch(0.38 0.12 28);
+  --color-rust-900: oklch(0.32 0.10 26);
+  --color-rust-950: oklch(0.22 0.08 24);
+
+  /* Navy backgrounds */
+  --color-navy-800: oklch(0.27 0.02 260);
+  --color-navy-900: oklch(0.18 0.02 260);
+  --color-navy-950: oklch(0.12 0.02 260);
+
+  /* Fonts */
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply antialiased bg-navy-950 text-slate-200 font-sans;
+}
+
+::selection {
+  background-color: oklch(0.60 0.18 35 / 0.3);
+}
+
+/* Hero gradient */
+.hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.60 0.18 35 / 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 50%, oklch(0.52 0.17 32 / 0.1), transparent),
+    linear-gradient(to bottom, var(--color-navy-900), var(--color-navy-800));
+}
+
+/* Glowing effects */
+.glow-border {
+  @apply relative;
+}
+
+.glow-border::before {
+  content: '';
+  @apply absolute -inset-px rounded-xl opacity-0 blur-sm transition-opacity duration-300;
+  background: linear-gradient(90deg,
+    oklch(0.60 0.18 35 / 0.5),
+    oklch(0.68 0.16 40 / 0.3),
+    oklch(0.52 0.17 32 / 0.5)
+  );
+}
+
+.glow-border:hover::before {
+  @apply opacity-100;
+}
+
+/* Text gradient */
+.text-gradient {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(90deg,
+    var(--color-rust-400),
+    var(--color-rust-500),
+    var(--color-rust-600)
+  );
+}
+
+/* Feature card */
+.feature-card {
+  @apply relative p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50
+         hover:border-rust-500/30 transition-all duration-300;
+}
+
+.feature-card:hover {
+  @apply bg-slate-800/80 -translate-y-1;
+  box-shadow: 0 20px 40px -20px oklch(0.60 0.18 35 / 0.2);
+}
+
+/* Buttons */
+.btn {
+  @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium transition-all duration-200;
+}
+
+.btn-primary {
+  @apply bg-rust-500 text-white hover:bg-rust-600;
+  box-shadow: 0 10px 30px -10px oklch(0.60 0.18 35 / 0.4);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 10px 30px -10px oklch(0.60 0.18 35 / 0.6);
+}
+
+.btn-secondary {
+  @apply bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 hover:border-slate-600;
+}
+
+/* Code blocks */
+.code-block {
+  @apply relative rounded-xl bg-slate-900 overflow-hidden border border-slate-800;
+}
+
+.code-block pre {
+  @apply p-4 overflow-x-auto text-sm;
+}
+
+/* Navigation */
+.nav-link {
+  @apply relative text-slate-300 hover:text-white transition-colors;
+}
+
+.nav-link::after {
+  content: '';
+  @apply absolute -bottom-1 left-0 w-0 h-0.5 bg-rust-500 transition-all duration-300;
+}
+
+.nav-link:hover::after {
+  @apply w-full;
+}
+
+/* Sidebar */
+.sidebar-link {
+  @apply block px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors;
+}
+
+.sidebar-link.active {
+  @apply text-rust-400 bg-rust-500/10 border-l-2 border-rust-500;
+}
+
+/* Badge */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-rust {
+  @apply bg-rust-500/10 text-rust-400 border border-rust-500/20;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.stagger-children > * {
+  @apply opacity-0;
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* Syntax highlighting - One Dark Pro inspired */
+.highlight .keyword { color: #c678dd; }
+.highlight .string { color: #98c379; }
+.highlight .variable { color: #e5c07b; }
+.highlight .function { color: #61afef; }
+.highlight .comment { color: #5c6370; font-style: italic; }
+.highlight .number { color: #d19a66; }
+.highlight .operator { color: #abb2bf; }
+
+/* Prose styling for documentation */
+.prose-docs {
+  max-width: none;
+}
+
+.prose-docs h2 {
+  @apply text-2xl font-semibold text-white mt-12 mb-6 pb-2 border-b border-slate-800;
+}
+
+.prose-docs h3 {
+  @apply text-xl font-semibold text-white mt-8 mb-4;
+}
+
+.prose-docs a {
+  @apply text-rust-400 no-underline hover:text-rust-300;
+}
+
+.prose-docs code {
+  @apply text-rust-300 bg-slate-800 px-1.5 py-0.5 rounded text-sm;
+}
+
+.prose-docs pre {
+  @apply bg-slate-900 border border-slate-800 rounded-lg;
+}

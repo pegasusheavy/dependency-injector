@@ -1,0 +1,60 @@
+<footer class="border-t border-slate-800 mt-20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <!-- Brand -->
+      <div class="md:col-span-2">
+        <a routerLink="/" class="flex items-center space-x-3 mb-4">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-rust-500 to-rust-700 flex items-center justify-center">
+            <fa-icon [icon]="['fas', 'flask']" class="text-white text-sm"></fa-icon>
+          </div>
+          <span class="text-xl font-semibold text-white">Dependency<span class="text-rust-500">Injector</span></span>
+        </a>
+        <p class="text-slate-400 max-w-md">
+          High-performance, lock-free dependency injection container for Rust.
+          Built for speed, designed for simplicity.
+        </p>
+      </div>
+
+      <!-- Documentation -->
+      <div>
+        <h4 class="text-sm font-semibold text-white mb-4">Documentation</h4>
+        <ul class="space-y-2 text-sm text-slate-400">
+          <li><a routerLink="/docs/getting-started" class="hover:text-white transition-colors">Getting Started</a></li>
+          <li><a routerLink="/docs/guide" class="hover:text-white transition-colors">Guide</a></li>
+          <li><a routerLink="/docs/api" class="hover:text-white transition-colors">API Reference</a></li>
+          <li><a routerLink="/docs/examples" class="hover:text-white transition-colors">Examples</a></li>
+        </ul>
+      </div>
+
+      <!-- Resources -->
+      <div>
+        <h4 class="text-sm font-semibold text-white mb-4">Resources</h4>
+        <ul class="space-y-2 text-sm text-slate-400">
+          <li>
+            <a href="https://github.com/pegasusheavy/dependency-injector" target="_blank" rel="noopener" class="hover:text-white transition-colors inline-flex items-center">
+              <fa-icon [icon]="['fab', 'github']" class="mr-2"></fa-icon>
+              GitHub
+            </a>
+          </li>
+          <li><a href="https://crates.io/crates/dependency-injector" target="_blank" rel="noopener" class="hover:text-white transition-colors">crates.io</a></li>
+          <li><a href="https://docs.rs/dependency-injector" target="_blank" rel="noopener" class="hover:text-white transition-colors">docs.rs</a></li>
+          <li><a href="https://github.com/pegasusheavy/dependency-injector/blob/main/CHANGELOG.md" target="_blank" rel="noopener" class="hover:text-white transition-colors">Changelog</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center">
+      <p class="text-sm text-slate-500">
+        © {{ currentYear }} Pegasus Heavy Industries. Released under MIT/Apache-2.0 license.
+      </p>
+      <div class="flex items-center space-x-4 mt-4 sm:mt-0">
+        <a href="https://github.com/pegasusheavy/dependency-injector"
+           target="_blank"
+           rel="noopener"
+           class="text-slate-500 hover:text-slate-300 transition-colors">
+          <fa-icon [icon]="['fab', 'github']" class="text-lg"></fa-icon>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,51 @@
+[package]
+name = "dependency-injector"
+version = "0.1.0"
+edition = "2024"
+description = "High-performance, lock-free dependency injection container for Rust"
+license = "MIT OR Apache-2.0"
+keywords = ["dependency-injection", "di", "ioc", "container", "service-locator"]
+categories = ["development-tools", "rust-patterns", "concurrency"]
+readme = "README.md"
+repository = "https://github.com/PegasusHeavyIndustries/armature"
+documentation = "https://docs.rs/dependency-injector"
+
+[features]
+default = ["tracing"]
+tracing = ["dep:tracing"]
+async = ["dep:tokio"]
+
+[dependencies]
+# Lock-free concurrent hashmap - much faster than RwLock<HashMap>
+dashmap = "6"
+
+# Faster hashing for TypeId keys
+ahash = "0.8"
+
+# Thread-safe lazy initialization
+once_cell = "1.19"
+
+# Faster parking lot mutex when needed
+parking_lot = "0.12"
+
+# Error handling
+thiserror = "2.0"
+
+# Optional tracing support
+tracing = { version = "0.1", optional = true }
+
+# Optional async support
+tokio = { version = "1.0", features = ["sync"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "time"] }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "container_bench"
+harness = false
+
+[dev-dependencies.cargo-husky]
+version = "1"
+default-features = false
+features = ["user-hooks"]

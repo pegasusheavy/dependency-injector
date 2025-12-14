@@ -1,0 +1,80 @@
+<div class="docs-page">
+  <div class="docs-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <ol>
+        <li><a routerLink="/">Home</a></li>
+        <li><span class="separator">/</span></li>
+        <li><a routerLink="/docs">Docs</a></li>
+        <li><span class="separator">/</span></li>
+        <li class="current">Guide</li>
+      </ol>
+    </nav>
+
+    <!-- Header -->
+    <header class="docs-header">
+      <h1><fa-icon [icon]="['fas', 'book']" class="mr-3 text-rust-500"></fa-icon>Guide</h1>
+      <p class="lead">Deep dive into dependency-injector's features and advanced usage patterns.</p>
+    </header>
+
+    <!-- Content -->
+    <div class="docs-content">
+      <h2 id="scoped-containers"><fa-icon [icon]="['fas', 'layer-group']" class="mr-2"></fa-icon>Scoped Containers</h2>
+      <p>
+        Scoped containers allow you to create hierarchical dependency trees. Child scopes
+        inherit all services from their parent but can also register their own services
+        or override parent services.
+      </p>
+      <app-code-block filename="scopes.rs" [code]="scopeCode" />
+
+      <h3 id="use-cases">Common Use Cases</h3>
+      <ul class="feature-list">
+        <li><strong>Request-scoped services</strong> - Create a scope per HTTP request with request-specific context</li>
+        <li><strong>Testing</strong> - Override production services with mocks in test scopes</li>
+        <li><strong>Multi-tenancy</strong> - Create tenant-specific scopes with tenant configuration</li>
+      </ul>
+
+      <h2 id="service-overrides"><fa-icon [icon]="['fas', 'exchange-alt']" class="mr-2"></fa-icon>Service Overrides</h2>
+      <p>
+        Child scopes can override services from parent scopes. This is particularly useful
+        for testing, where you want to replace real implementations with mocks.
+      </p>
+      <app-code-block filename="overrides.rs" [code]="overrideCode" />
+
+      <h2 id="thread-safety"><fa-icon [icon]="['fas', 'shield']" class="mr-2"></fa-icon>Thread Safety</h2>
+      <p>
+        Dependency Injector is designed to be fully thread-safe. All containers can be safely
+        shared across threads using <code>Arc</code>. The internal storage uses
+        <code>DashMap</code> for lock-free concurrent access.
+      </p>
+
+      <div class="info-card">
+        <h4><fa-icon [icon]="['fas', 'lightbulb']" class="mr-2 text-yellow-400"></fa-icon>Performance Tip</h4>
+        <p>
+          For hot paths where you resolve the same service frequently, consider caching
+          the <code>Arc&lt;T&gt;</code> reference instead of calling <code>get()</code> repeatedly.
+        </p>
+      </div>
+
+      <h2 id="error-handling"><fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-2"></fa-icon>Error Handling</h2>
+      <p>
+        Service resolution returns a <code>Result</code> type. The main error cases are:
+      </p>
+      <ul class="feature-list">
+        <li><code>DiError::NotFound</code> - Service type not registered in container or parent scopes</li>
+        <li><code>DiError::FactoryPanicked</code> - Factory function panicked during creation</li>
+      </ul>
+
+      <div class="nav-cards">
+        <a routerLink="/docs/api" class="nav-card">
+          <h4><fa-icon [icon]="['fas', 'cog']" class="mr-2"></fa-icon>API Reference <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>Complete API documentation for all types and methods.</p>
+        </a>
+        <a routerLink="/docs/examples" class="nav-card">
+          <h4><fa-icon [icon]="['fas', 'code']" class="mr-2"></fa-icon>Examples <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>Real-world examples and integration patterns.</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

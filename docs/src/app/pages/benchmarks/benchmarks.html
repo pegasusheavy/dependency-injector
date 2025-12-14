@@ -1,0 +1,199 @@
+<div class="benchmarks-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <h1 class="text-4xl font-bold text-white mb-4">
+        <fa-icon [icon]="['fas', 'chart-line']" class="mr-3 text-rust-500"></fa-icon>
+        Performance Benchmarks
+      </h1>
+      <p class="text-xl text-slate-400 max-w-3xl">
+        Real-time performance metrics from our continuous benchmarking pipeline.
+        All benchmarks run on every commit to track performance over time.
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Loading State -->
+    @if (benchmarkService.loading()) {
+      <div class="flex items-center justify-center py-20">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-rust-500 border-t-transparent"></div>
+        <span class="ml-4 text-slate-400">Loading benchmark data...</span>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (benchmarkService.error()) {
+      <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-8">
+        <div class="flex items-center">
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-yellow-500 mr-3"></fa-icon>
+          <span class="text-yellow-200">{{ benchmarkService.error() }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- Benchmark Data -->
+    @if (!benchmarkService.loading()) {
+      <!-- Stats Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div class="stat-card">
+          <div class="stat-icon bg-rust-500/20">
+            <fa-icon [icon]="['fas', 'bolt']" class="text-rust-500"></fa-icon>
+          </div>
+          <div>
+            <div class="stat-value">{{ benchmarkService.processedBenchmarks().length }}</div>
+            <div class="stat-label">Benchmarks</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-green-500/20">
+            <fa-icon [icon]="['fas', 'code']" class="text-green-500"></fa-icon>
+          </div>
+          <div>
+            <div class="stat-value">{{ getLastCommit() || 'N/A' }}</div>
+            <div class="stat-label">Latest Commit</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon bg-blue-500/20">
+            <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-blue-500"></fa-icon>
+          </div>
+          <div>
+            <div class="stat-value text-base">{{ getLastUpdate() || 'N/A' }}</div>
+            <div class="stat-label">Last Updated</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmark Table -->
+      <div class="benchmark-table-container">
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>Benchmark</th>
+              <th>Current</th>
+              <th>Previous</th>
+              <th>Change</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (benchmark of benchmarkService.processedBenchmarks(); track benchmark.name) {
+              <tr>
+                <td>
+                  <code class="benchmark-name">{{ benchmark.name }}</code>
+                  @if (benchmark.range) {
+                    <span class="benchmark-range">{{ benchmark.range }}</span>
+                  }
+                </td>
+                <td class="font-mono text-white">
+                  {{ formatValue(benchmark.current, benchmark.unit) }}
+                </td>
+                <td class="font-mono text-slate-400">
+                  {{ benchmark.previous !== null ? formatValue(benchmark.previous, benchmark.unit) : '—' }}
+                </td>
+                <td [class]="getChangeClass(benchmark.changePercent)">
+                  <span class="change-indicator">
+                    {{ getChangeIcon(benchmark.changePercent) }}
+                    {{ formatChange(benchmark.changePercent) }}
+                  </span>
+                </td>
+                <td>
+                  @if (benchmark.history.length >= 2) {
+                    <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+                      <polyline
+                        [attr.points]="getSparklinePoints(benchmark)"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  } @else {
+                    <span class="text-slate-500">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-dot bg-green-400"></span>
+          <span>Faster (improvement)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot bg-red-400"></span>
+          <span>Slower (regression)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot bg-slate-400"></span>
+          <span>No significant change</span>
+        </div>
+      </div>
+
+      <!-- Methodology -->
+      <div class="methodology-section">
+        <h2 class="text-2xl font-bold text-white mb-6">
+          <fa-icon [icon]="['fas', 'flask']" class="mr-2 text-rust-500"></fa-icon>
+          Benchmark Methodology
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="methodology-card">
+            <h3 class="methodology-title">
+              <fa-icon [icon]="['fas', 'server']" class="mr-2"></fa-icon>
+              Environment
+            </h3>
+            <ul class="methodology-list">
+              <li>Ubuntu Latest (GitHub Actions runner)</li>
+              <li>Rust stable toolchain</li>
+              <li>All features enabled</li>
+              <li>Release mode optimizations</li>
+            </ul>
+          </div>
+
+          <div class="methodology-card">
+            <h3 class="methodology-title">
+              <fa-icon [icon]="['fas', 'cog']" class="mr-2"></fa-icon>
+              Configuration
+            </h3>
+            <ul class="methodology-list">
+              <li>Criterion.rs benchmarking framework</li>
+              <li>Statistical analysis with confidence intervals</li>
+              <li>Multiple iterations for stability</li>
+              <li>Warm-up runs excluded</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Links -->
+      <div class="links-section">
+        <a href="https://github.com/pegasusheavy/dependency-injector/actions/workflows/bench.yml"
+           target="_blank"
+           rel="noopener"
+           class="action-link">
+          <fa-icon [icon]="['fab', 'github']" class="mr-2"></fa-icon>
+          View Benchmark Workflow
+          <fa-icon [icon]="['fas', 'external-link-alt']" class="ml-2 text-sm"></fa-icon>
+        </a>
+        <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/benches"
+           target="_blank"
+           rel="noopener"
+           class="action-link">
+          <fa-icon [icon]="['fas', 'code']" class="mr-2"></fa-icon>
+          View Benchmark Source
+          <fa-icon [icon]="['fas', 'external-link-alt']" class="ml-2 text-sm"></fa-icon>
+        </a>
+      </div>
+    }
+  </div>
+</div>
+

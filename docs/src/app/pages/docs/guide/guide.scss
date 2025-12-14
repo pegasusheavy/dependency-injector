@@ -1,0 +1,125 @@
+@reference "tailwindcss";
+
+.docs-page {
+  @apply min-h-screen pt-24 pb-16;
+}
+
+.docs-container {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+// Breadcrumb
+.breadcrumb {
+  @apply mb-8 text-sm;
+
+  ol {
+    @apply flex items-center space-x-2 text-slate-400;
+  }
+
+  a {
+    @apply hover:text-white transition-colors;
+  }
+
+  .separator {
+    @apply text-slate-600;
+  }
+
+  .current {
+    @apply text-slate-200;
+  }
+}
+
+// Header
+.docs-header {
+  @apply mb-12;
+
+  h1 {
+    @apply text-4xl font-bold text-white mb-4;
+  }
+
+  .lead {
+    @apply text-xl text-slate-400;
+  }
+}
+
+// Content
+.docs-content {
+  h2 {
+    @apply text-2xl font-semibold text-white mt-12 mb-6 pb-2 border-b border-slate-800;
+
+    &:first-child {
+      @apply mt-0;
+    }
+  }
+
+  h3 {
+    @apply text-xl font-semibold text-white mt-8 mb-4;
+  }
+
+  h4 {
+    @apply text-lg font-semibold text-white mb-2;
+  }
+
+  p {
+    @apply text-slate-300 mb-4;
+  }
+
+  code {
+    @apply bg-slate-800 px-1.5 py-0.5 rounded text-sm;
+    color: var(--color-rust-300);
+  }
+
+  strong {
+    @apply text-white;
+  }
+
+  app-code-block {
+    @apply block my-6;
+  }
+}
+
+// Feature list
+.feature-list {
+  @apply text-slate-300 space-y-2 mt-4 list-disc list-inside;
+}
+
+// Info card
+.info-card {
+  @apply p-4 rounded-lg my-6;
+  background-color: oklch(0.60 0.18 35 / 0.1);
+  border: 1px solid oklch(0.60 0.18 35 / 0.3);
+
+  h4 {
+    @apply mb-2;
+    color: var(--color-rust-400);
+  }
+
+  p {
+    @apply text-slate-300 mb-0;
+  }
+}
+
+// Navigation cards
+.nav-cards {
+  @apply grid gap-4 mt-8;
+}
+
+.nav-card {
+  @apply block p-4 rounded-lg bg-slate-800/50 border border-slate-700 transition-colors;
+
+  &:hover {
+    border-color: oklch(0.60 0.18 35 / 0.5);
+  }
+
+  h4 {
+    @apply font-semibold text-white mb-1;
+  }
+
+  p {
+    @apply text-slate-400 text-sm mb-0;
+  }
+
+  &:hover h4 {
+    color: var(--color-rust-400);
+  }
+}

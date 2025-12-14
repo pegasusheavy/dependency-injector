@@ -1,0 +1,109 @@
+<div class="docs-page">
+  <div class="docs-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <ol>
+        <li><a routerLink="/">Home</a></li>
+        <li><span class="separator">/</span></li>
+        <li><a routerLink="/docs">Docs</a></li>
+        <li><span class="separator">/</span></li>
+        <li class="current">API Reference</li>
+      </ol>
+    </nav>
+
+    <!-- Header -->
+    <header class="docs-header">
+      <h1><fa-icon [icon]="['fas', 'cog']" class="mr-3 text-rust-500"></fa-icon>API Reference</h1>
+      <p class="lead">Complete reference for the dependency-injector public API.</p>
+    </header>
+
+    <!-- Content -->
+    <div class="docs-content">
+      <div class="external-link">
+        <a href="https://docs.rs/dependency-injector" target="_blank" rel="noopener" class="docs-rs-link">
+          <fa-icon [icon]="['fas', 'external-link']" class="mr-2"></fa-icon>
+          View full API documentation on docs.rs
+        </a>
+      </div>
+
+      <h2 id="container"><fa-icon [icon]="['fas', 'box']" class="mr-2"></fa-icon>Container</h2>
+      <p>The main dependency injection container. Thread-safe and can be shared across threads.</p>
+
+      <div class="api-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Description</th>
+              <th>Returns</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (method of containerMethods; track method.name) {
+              <tr>
+                <td><code>{{ method.name }}</code></td>
+                <td>{{ method.description }}</td>
+                <td><code>{{ method.returns }}</code></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="scoped-container"><fa-icon [icon]="['fas', 'layer-group']" class="mr-2"></fa-icon>ScopedContainer</h2>
+      <p>
+        A child container that inherits services from its parent. Created via <code>Container::scope()</code>.
+        Has the same API as <code>Container</code>.
+      </p>
+
+      <h2 id="di-error"><fa-icon [icon]="['fas', 'exclamation-circle']" class="mr-2"></fa-icon>DiError</h2>
+      <p>Error type returned when service resolution fails.</p>
+
+      <div class="api-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Variant</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (error of errorVariants; track error.name) {
+              <tr>
+                <td><code>{{ error.name }}</code></td>
+                <td>{{ error.description }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="traits"><fa-icon [icon]="['fas', 'puzzle-piece']" class="mr-2"></fa-icon>Traits</h2>
+
+      <h3 id="injectable">Injectable</h3>
+      <p>
+        Marker trait for types that can be injected. Automatically implemented for any
+        <code>T: Send + Sync + 'static</code>. You don't need to implement this manually.
+      </p>
+
+      <h3 id="provider">Provider</h3>
+      <p>
+        Internal trait for service providers. You typically don't interact with this directly.
+      </p>
+
+      <h2 id="prelude"><fa-icon [icon]="['fas', 'star']" class="mr-2"></fa-icon>Prelude</h2>
+      <p>The prelude module exports common types for convenience:</p>
+
+      <div class="prelude-list">
+        <code>use dependency_injector::prelude::*;</code>
+        <ul>
+          <li><code>Container</code></li>
+          <li><code>ScopedContainer</code></li>
+          <li><code>DiError</code></li>
+          <li><code>Result</code></li>
+          <li><code>Arc</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

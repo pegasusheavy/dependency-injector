@@ -1,0 +1,22 @@
+<div class="code-block">
+  <div class="code-header">
+    <div class="window-controls">
+      <div class="control control-red"></div>
+      <div class="control control-yellow"></div>
+      <div class="control control-green"></div>
+    </div>
+    @if (filename()) {
+      <span class="filename">{{ filename() }}</span>
+    }
+    <button (click)="copyCode()"
+            class="copy-btn"
+            [attr.aria-label]="copied() ? 'Copied!' : 'Copy code'">
+      @if (copied()) {
+        <fa-icon [icon]="['fas', 'check']" class="text-green-500"></fa-icon>
+      } @else {
+        <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+      }
+    </button>
+  </div>
+  <pre class="code-content"><code [innerHTML]="code()"></code></pre>
+</div>

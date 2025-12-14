@@ -1,0 +1,183 @@
+@reference "tailwindcss";
+
+// Hero Section
+.hero-section {
+  @apply pt-32 pb-20 relative overflow-hidden;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.60 0.18 35 / 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 50%, oklch(0.52 0.17 32 / 0.1), transparent),
+    linear-gradient(to bottom, var(--color-navy-900), var(--color-navy-800));
+}
+
+.hero-bg {
+  @apply absolute inset-0 overflow-hidden pointer-events-none;
+}
+
+.hero-glow {
+  @apply absolute rounded-full blur-3xl;
+
+  &-left {
+    @apply top-1/4 -left-20 w-72 h-72;
+    background-color: var(--color-rust-500);
+    opacity: 0.1;
+  }
+
+  &-right {
+    @apply bottom-1/4 -right-20 w-96 h-96;
+    background-color: var(--color-rust-600);
+    opacity: 0.1;
+  }
+}
+
+.hero-content {
+  @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative;
+}
+
+.version-badge {
+  @apply inline-flex items-center px-4 py-1.5 rounded-full mb-8;
+  background-color: oklch(0.60 0.18 35 / 0.1);
+  border: 1px solid oklch(0.60 0.18 35 / 0.2);
+}
+
+.pulse-dot {
+  @apply inline-block w-2 h-2 rounded-full mr-2;
+  background-color: var(--color-rust-500);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 oklch(0.60 0.18 35 / 0.4);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 4px oklch(0.60 0.18 35 / 0);
+  }
+}
+
+.version-text {
+  @apply text-sm;
+  color: var(--color-rust-400);
+}
+
+.hero-title {
+  @apply text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight;
+}
+
+.hero-subtitle {
+  @apply text-xl text-slate-400 max-w-2xl mx-auto mb-10;
+}
+
+.cta-buttons {
+  @apply flex flex-col sm:flex-row items-center justify-center gap-4;
+}
+
+.btn-icon {
+  @apply w-5 h-5 ml-2;
+}
+
+.btn-icon-left {
+  @apply w-5 h-5 mr-2;
+}
+
+.install-block {
+  @apply mt-12 max-w-lg mx-auto;
+}
+
+// Features Section
+.features-section {
+  @apply py-20 relative;
+}
+
+.section-container {
+  @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.section-header {
+  @apply text-center mb-16;
+}
+
+.section-title {
+  @apply text-3xl sm:text-4xl font-bold text-white mb-4;
+}
+
+.section-subtitle {
+  @apply text-lg text-slate-400 max-w-2xl mx-auto;
+}
+
+.features-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+.feature-icon {
+  @apply w-12 h-12 rounded-xl flex items-center justify-center mb-4;
+  background-color: oklch(0.60 0.18 35 / 0.1);
+
+  .icon {
+    @apply w-6 h-6;
+    color: var(--color-rust-500);
+  }
+}
+
+.feature-title {
+  @apply text-lg font-semibold text-white mb-2;
+}
+
+.feature-description {
+  @apply text-slate-400 text-sm;
+}
+
+// Example Section
+.example-section {
+  @apply py-20 bg-slate-900/50;
+}
+
+.example-grid {
+  @apply grid grid-cols-1 lg:grid-cols-2 gap-8;
+}
+
+.benefits-list {
+  @apply flex flex-col justify-center space-y-6;
+}
+
+.benefit-item {
+  @apply flex items-start;
+}
+
+.benefit-icon {
+  @apply shrink-0 w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center mr-4;
+
+  .icon {
+    @apply w-5 h-5 text-green-500;
+  }
+}
+
+.benefit-content {
+  @apply flex-1;
+}
+
+.benefit-title {
+  @apply text-lg font-medium text-white;
+}
+
+.benefit-description {
+  @apply text-slate-400 text-sm mt-1;
+}
+
+// CTA Section
+.cta-section {
+  @apply py-20;
+}
+
+.cta-container {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center;
+}
+
+.cta-title {
+  @apply text-3xl sm:text-4xl font-bold text-white mb-6;
+}
+
+.cta-subtitle {
+  @apply text-lg text-slate-400 mb-8;
+}

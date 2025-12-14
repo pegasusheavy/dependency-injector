@@ -1,0 +1,49 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Rust sources
+*.rs text diff=rust
+*.toml text
+
+# Documentation
+*.md text diff=markdown
+*.txt text
+LICENSE* text
+
+# Shell scripts
+*.sh text eol=lf
+
+# Git hooks
+.cargo-husky/hooks/* text eol=lf
+
+# Config files
+*.json text
+*.yaml text
+*.yml text
+.editorconfig text
+.gitignore text
+.gitattributes text
+
+# Binary files (don't diff)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+
+# Lock files - keep exact
+Cargo.lock text -diff linguist-generated
+
+# Generated files
+/target/** linguist-generated
+

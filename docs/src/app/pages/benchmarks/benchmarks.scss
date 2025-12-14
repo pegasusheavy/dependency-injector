@@ -1,0 +1,139 @@
+@reference "tailwindcss";
+
+.benchmarks-page {
+  min-height: 100vh;
+  background-color: var(--color-navy-950);
+}
+
+.page-header {
+  background: linear-gradient(to bottom, var(--color-navy-900), var(--color-navy-950));
+  border-bottom: 1px solid rgb(51 65 85 / 0.5);
+}
+
+.stat-card {
+  @apply flex items-center gap-4 p-6 rounded-xl;
+  background-color: var(--color-navy-900);
+  border: 1px solid rgb(51 65 85 / 0.5);
+}
+
+.stat-icon {
+  @apply w-12 h-12 rounded-lg flex items-center justify-center text-xl;
+}
+
+.stat-value {
+  @apply text-2xl font-bold text-white;
+}
+
+.stat-label {
+  @apply text-sm text-slate-400;
+}
+
+.benchmark-table-container {
+  @apply overflow-x-auto rounded-xl;
+  background-color: var(--color-navy-900);
+  border: 1px solid rgb(51 65 85 / 0.5);
+}
+
+.benchmark-table {
+  @apply w-full;
+
+  thead {
+    background-color: var(--color-navy-800);
+
+    th {
+      @apply px-6 py-4 text-left text-sm font-semibold text-slate-300 uppercase tracking-wider;
+    }
+  }
+
+  tbody {
+    tr {
+      @apply border-t border-slate-700/50 transition-colors;
+
+      &:hover {
+        background-color: var(--color-navy-800);
+      }
+    }
+
+    td {
+      @apply px-6 py-4 text-sm;
+    }
+  }
+}
+
+.benchmark-name {
+  @apply text-white font-medium;
+  background-color: var(--color-navy-800);
+  @apply px-2 py-1 rounded;
+}
+
+.benchmark-range {
+  @apply ml-2 text-slate-500 text-xs;
+}
+
+.change-indicator {
+  @apply font-mono font-medium;
+}
+
+.sparkline {
+  @apply w-24 h-8;
+  color: var(--color-rust-500);
+}
+
+.legend {
+  @apply flex flex-wrap gap-6 mt-8 pt-8 border-t border-slate-700/50;
+}
+
+.legend-item {
+  @apply flex items-center gap-2 text-sm text-slate-400;
+}
+
+.legend-dot {
+  @apply w-3 h-3 rounded-full;
+}
+
+.methodology-section {
+  @apply mt-16 pt-16 border-t border-slate-700/50;
+}
+
+.methodology-card {
+  @apply p-6 rounded-xl;
+  background-color: var(--color-navy-900);
+  border: 1px solid rgb(51 65 85 / 0.5);
+}
+
+.methodology-title {
+  @apply text-lg font-semibold text-white mb-4;
+  color: var(--color-rust-400);
+}
+
+.methodology-list {
+  @apply space-y-2 text-slate-400;
+
+  li {
+    @apply flex items-center;
+
+    &::before {
+      content: '•';
+      @apply mr-2;
+      color: var(--color-rust-500);
+    }
+  }
+}
+
+.links-section {
+  @apply flex flex-wrap gap-4 mt-12;
+}
+
+.action-link {
+  @apply inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all;
+  background-color: var(--color-navy-800);
+  color: var(--color-slate-300);
+  border: 1px solid rgb(51 65 85 / 0.5);
+
+  &:hover {
+    background-color: var(--color-navy-700);
+    color: white;
+    border-color: var(--color-rust-500);
+  }
+}
+

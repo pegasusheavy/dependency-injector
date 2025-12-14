@@ -1,0 +1,78 @@
+<div class="docs-page">
+  <div class="docs-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <ol>
+        <li><a routerLink="/"><fa-icon [icon]="['fas', 'rocket']" class="mr-1"></fa-icon>Home</a></li>
+        <li><span class="separator">/</span></li>
+        <li class="current">Getting Started</li>
+      </ol>
+    </nav>
+
+    <!-- Header -->
+    <header class="docs-header">
+      <h1><fa-icon [icon]="['fas', 'rocket']" class="mr-3 text-rust-500"></fa-icon>Getting Started</h1>
+      <p class="lead">Learn how to add dependency-injector to your Rust project and start using dependency injection.</p>
+    </header>
+
+    <!-- Content -->
+    <div class="docs-content">
+      <h2 id="installation">Installation</h2>
+      <p>Add dependency-injector to your <code>Cargo.toml</code>:</p>
+      <app-code-block filename="Cargo.toml" [code]="installCode" />
+
+      <h3 id="features">Optional Features</h3>
+      <p>Enable optional features based on your needs:</p>
+      <app-code-block filename="Cargo.toml" [code]="featuresCode" />
+
+      <ul class="feature-list">
+        <li><code>tracing</code> - Enable tracing integration for debugging (enabled by default)</li>
+        <li><code>async</code> - Enable async/await support with Tokio</li>
+      </ul>
+
+      <h2 id="quick-start">Quick Start</h2>
+      <p>Here's a simple example to get you started:</p>
+      <app-code-block filename="main.rs" [code]="quickStartCode" />
+
+      <h2 id="core-concepts">Core Concepts</h2>
+
+      <h3 id="container">Container</h3>
+      <p>
+        The <code>Container</code> is the central piece of dependency-injector. It stores and manages your services.
+        Any type that implements <code>Send + Sync + 'static</code> can be registered.
+      </p>
+
+      <h3 id="lifetimes">Service Lifetimes</h3>
+      <p>Dependency Injector supports three service lifetimes:</p>
+
+      <div class="lifetime-cards">
+        <div class="lifetime-card">
+          <h4><fa-icon [icon]="['fas', 'cube']" class="mr-2 text-rust-400"></fa-icon>Singleton</h4>
+          <p>One instance shared everywhere. Created immediately on registration.</p>
+        </div>
+        <div class="lifetime-card">
+          <h4><fa-icon [icon]="['fas', 'clock']" class="mr-2 text-rust-400"></fa-icon>Lazy Singleton</h4>
+          <p>One instance shared everywhere. Created on first access.</p>
+        </div>
+        <div class="lifetime-card">
+          <h4><fa-icon [icon]="['fas', 'rotate']" class="mr-2 text-rust-400"></fa-icon>Transient</h4>
+          <p>New instance created every time you resolve the service.</p>
+        </div>
+      </div>
+
+      <app-code-block filename="lifetimes.rs" [code]="lifetimesCode" />
+
+      <h2 id="next-steps">Next Steps</h2>
+      <div class="next-steps">
+        <a routerLink="/docs/guide" class="next-step-card">
+          <h4><fa-icon [icon]="['fas', 'book']" class="mr-2"></fa-icon>Guide <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>Deep dive into containers, scopes, and advanced patterns.</p>
+        </a>
+        <a routerLink="/docs/examples" class="next-step-card">
+          <h4><fa-icon [icon]="['fas', 'code']" class="mr-2"></fa-icon>Examples <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>See real-world usage patterns and integrations.</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,161 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-bench-
+
+      - name: Run benchmarks
+        run: cargo bench --all-features -- --noplot --save-baseline main 2>&1 | tee benchmark-output.txt
+
+      - name: Parse benchmark results to JSON
+        run: |
+          python3 << 'EOF'
+          import json
+          import re
+          import sys
+          from datetime import datetime
+
+          results = []
+          current_group = None
+
+          with open('benchmark-output.txt', 'r') as f:
+              content = f.read()
+
+          # Match Criterion benchmark output
+          # Pattern: "benchmark_name    time:   [lower_bound upper_bound median]"
+          pattern = r'(\S+)\s+time:\s+\[(\d+\.?\d*)\s*(\w+)\s+(\d+\.?\d*)\s*(\w+)\s+(\d+\.?\d*)\s*(\w+)\]'
+
+          for match in re.finditer(pattern, content):
+              name = match.group(1)
+              lower = float(match.group(2))
+              lower_unit = match.group(3)
+              upper = float(match.group(4))
+              upper_unit = match.group(5)
+              median = float(match.group(6))
+              median_unit = match.group(7)
+
+              # Convert to nanoseconds for consistency
+              def to_ns(value, unit):
+                  multipliers = {'ps': 0.001, 'ns': 1, 'µs': 1000, 'us': 1000, 'ms': 1000000, 's': 1000000000}
+                  return value * multipliers.get(unit, 1)
+
+              results.append({
+                  'name': name,
+                  'value': to_ns(median, median_unit),
+                  'unit': 'ns',
+                  'range': f'± {to_ns(upper - lower, upper_unit) / 2:.2f}',
+                  'extra': f'median: {median} {median_unit}'
+              })
+
+          # If no Criterion output, try to parse simpler format
+          if not results:
+              # Match "test benchmark_name ... bench: X ns/iter (+/- Y)"
+              pattern2 = r'test\s+(\S+)\s+\.\.\.\s+bench:\s+([\d,]+)\s+ns/iter\s+\(\+/-\s+([\d,]+)\)'
+              for match in re.finditer(pattern2, content):
+                  name = match.group(1)
+                  value = int(match.group(2).replace(',', ''))
+                  variance = int(match.group(3).replace(',', ''))
+                  results.append({
+                      'name': name,
+                      'value': value,
+                      'unit': 'ns/iter',
+                      'range': f'± {variance}'
+                  })
+
+          output = {
+              'timestamp': datetime.utcnow().isoformat() + 'Z',
+              'commit': '${{ github.sha }}',
+              'results': results
+          }
+
+          with open('benchmark-results.json', 'w') as f:
+              json.dump(output, f, indent=2)
+
+          print(f'Parsed {len(results)} benchmark results')
+          print(json.dumps(output, indent=2))
+          EOF
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        if: github.event_name != 'pull_request'
+        with:
+          name: Rust Benchmarks
+          tool: 'cargo'
+          output-file-path: benchmark-output.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          benchmark-data-dir-path: benchmarks
+          comment-on-alert: true
+          alert-threshold: '150%'
+          fail-on-alert: false
+
+      - name: Upload benchmark results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+            benchmark-output.txt
+            target/criterion
+          retention-days: 30
+
+      - name: Comment on PR with benchmark results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('benchmark-results.json', 'utf8'));
+
+            let body = '## 📊 Benchmark Results\n\n';
+            body += '| Benchmark | Time | Range |\n';
+            body += '|-----------|------|-------|\n';
+
+            for (const r of results.results) {
+              const timeStr = r.value >= 1000000
+                ? `${(r.value / 1000000).toFixed(2)} ms`
+                : r.value >= 1000
+                ? `${(r.value / 1000).toFixed(2)} µs`
+                : `${r.value.toFixed(2)} ns`;
+              body += `| \`${r.name}\` | ${timeStr} | ${r.range} |\n`;
+            }
+
+            body += `\n<sub>Commit: ${results.commit.slice(0, 7)}</sub>`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

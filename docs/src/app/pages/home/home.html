@@ -1,0 +1,127 @@
+<!-- Hero Section -->
+<section class="hero-section">
+  <!-- Background decorations -->
+  <div class="hero-bg">
+    <div class="hero-glow hero-glow-left"></div>
+    <div class="hero-glow hero-glow-right"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="stagger-children text-center">
+      <!-- Badge -->
+      <div class="version-badge">
+        <span class="pulse-dot"></span>
+        <span class="version-text">v0.1.0 — Now Available</span>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="hero-title">
+        Dependency Injection<br>
+        <span class="text-gradient">Lightning Fast</span>
+      </h1>
+
+      <!-- Subheadline -->
+      <p class="hero-subtitle">
+        A high-performance, lock-free dependency injection container for Rust.
+        Type-safe, zero-config, and built for modern concurrent applications.
+      </p>
+
+      <!-- CTA Buttons -->
+      <div class="cta-buttons">
+        <a routerLink="/docs/getting-started" class="btn btn-primary">
+          Get Started
+          <fa-icon [icon]="['fas', 'arrow-right']" class="btn-icon"></fa-icon>
+        </a>
+        <a href="https://github.com/pegasusheavy/dependency-injector"
+           target="_blank"
+           rel="noopener"
+           class="btn btn-secondary">
+          <fa-icon [icon]="['fab', 'github']" class="btn-icon-left"></fa-icon>
+          View on GitHub
+        </a>
+      </div>
+
+      <!-- Install command -->
+      <div class="install-block">
+        <app-code-block
+          filename="Cargo.toml"
+          [code]="installCode" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+  <div class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Why Dependency Injector?</h2>
+      <p class="section-subtitle">
+        Built from the ground up for performance and ergonomics in modern Rust applications.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      @for (feature of features; track feature.title) {
+        <div class="feature-card">
+          <div class="feature-icon">
+            <fa-icon [icon]="['fas', feature.icon]"></fa-icon>
+          </div>
+          <h3 class="feature-title">{{ feature.title }}</h3>
+          <p class="feature-description">{{ feature.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Code Example Section -->
+<section class="example-section">
+  <div class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Simple, Intuitive API</h2>
+      <p class="section-subtitle">Get started in seconds with a clean, ergonomic interface.</p>
+    </div>
+
+    <div class="example-grid">
+      <app-code-block filename="main.rs" [code]="exampleCode" />
+
+      <div class="benefits-list">
+        @for (benefit of benefits; track benefit.title) {
+          <div class="benefit-item">
+            <div class="benefit-icon">
+              <fa-icon [icon]="['fas', 'check']"></fa-icon>
+            </div>
+            <div class="benefit-content">
+              <h3 class="benefit-title">{{ benefit.title }}</h3>
+              <p class="benefit-description">{{ benefit.description }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+  <div class="cta-container">
+    <h2 class="cta-title">Ready to get started?</h2>
+    <p class="cta-subtitle">
+      Add dependency-injector to your project and experience dependency injection done right.
+    </p>
+    <div class="cta-buttons">
+      <a routerLink="/docs/getting-started" class="btn btn-primary">
+        <fa-icon [icon]="['fas', 'book']" class="btn-icon-left"></fa-icon>
+        Read the Docs
+      </a>
+      <a href="https://github.com/pegasusheavy/dependency-injector"
+         target="_blank"
+         rel="noopener"
+         class="btn btn-secondary">
+        <fa-icon [icon]="['fab', 'github']" class="btn-icon-left"></fa-icon>
+        Star on GitHub
+      </a>
+    </div>
+  </div>
+</section>

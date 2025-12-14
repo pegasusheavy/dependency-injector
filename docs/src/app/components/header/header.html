@@ -1,0 +1,64 @@
+<header class="fixed top-0 left-0 right-0 z-50 bg-navy-950/80 backdrop-blur-xl border-b border-slate-800/50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="flex items-center justify-between h-16">
+      <!-- Logo -->
+      <a routerLink="/" class="flex items-center space-x-3 group">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-rust-500 to-rust-700 flex items-center justify-center transform group-hover:scale-105 transition-transform">
+          <fa-icon [icon]="['fas', 'flask']" class="text-white text-sm"></fa-icon>
+        </div>
+        <span class="text-xl font-semibold text-white">Dependency<span class="text-rust-500">Injector</span></span>
+      </a>
+
+      <!-- Desktop navigation -->
+      <div class="hidden md:flex items-center space-x-8">
+        @for (link of navLinks; track link.path) {
+          <a [routerLink]="link.path"
+             routerLinkActive="text-white"
+             [routerLinkActiveOptions]="{ exact: link.exact }"
+             class="nav-link">
+            {{ link.label }}
+          </a>
+        }
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center space-x-4">
+        <span class="hidden sm:inline-flex badge badge-rust">v0.1.0</span>
+
+        <a href="https://github.com/pegasusheavy/dependency-injector"
+           target="_blank"
+           rel="noopener"
+           class="p-2 text-slate-400 hover:text-white transition-colors"
+           aria-label="GitHub">
+          <fa-icon [icon]="['fab', 'github']" class="text-xl"></fa-icon>
+        </a>
+
+        <!-- Mobile menu button -->
+        <button (click)="toggleMobileMenu()"
+                class="md:hidden p-2 text-slate-400 hover:text-white"
+                aria-label="Menu">
+          @if (mobileMenuOpen()) {
+            <fa-icon [icon]="['fas', 'xmark']" class="text-xl"></fa-icon>
+          } @else {
+            <fa-icon [icon]="['fas', 'bars']" class="text-xl"></fa-icon>
+          }
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Mobile menu -->
+  @if (mobileMenuOpen()) {
+    <div class="md:hidden border-t border-slate-800 bg-navy-950/95 backdrop-blur-xl">
+      <div class="px-4 py-4 space-y-2">
+        @for (link of navLinks; track link.path) {
+          <a [routerLink]="link.path"
+             (click)="mobileMenuOpen.set(false)"
+             class="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg">
+            {{ link.label }}
+          </a>
+        }
+      </div>
+    </div>
+  }
+</header>

@@ -1,0 +1,66 @@
+<div class="docs-page">
+  <div class="docs-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <ol>
+        <li><a routerLink="/">Home</a></li>
+        <li><span class="separator">/</span></li>
+        <li><a routerLink="/docs">Docs</a></li>
+        <li><span class="separator">/</span></li>
+        <li class="current">Examples</li>
+      </ol>
+    </nav>
+
+    <!-- Header -->
+    <header class="docs-header">
+      <h1><fa-icon [icon]="['fas', 'code']" class="mr-3 text-rust-500"></fa-icon>Examples</h1>
+      <p class="lead">Real-world usage patterns and integration examples.</p>
+    </header>
+
+    <!-- Content -->
+    <div class="docs-content">
+      <h2 id="armature"><fa-icon [icon]="['fas', 'server']" class="mr-2"></fa-icon>Armature Web Framework</h2>
+      <p>
+        Integrate dependency-injector with <a href="https://github.com/pegasusheavy/armature" target="_blank" rel="noopener">Armature</a>,
+        a modern Rust HTTP framework with Angular/NestJS-style decorators and built-in dependency injection.
+      </p>
+      <app-code-block filename="main.rs" [code]="armatureCode" />
+
+      <h2 id="testing"><fa-icon [icon]="['fas', 'flask']" class="mr-2"></fa-icon>Testing with Mocks</h2>
+      <p>
+        Use scoped containers to replace real services with mocks during testing.
+      </p>
+      <app-code-block filename="tests.rs" [code]="testingCode" />
+
+      <h2 id="multi-tenant"><fa-icon [icon]="['fas', 'building']" class="mr-2"></fa-icon>Multi-Tenant Applications</h2>
+      <p>
+        Create isolated scopes for each tenant while sharing common services.
+      </p>
+      <app-code-block filename="multi_tenant.rs" [code]="multiTenantCode" />
+
+      <h2 id="more-examples">More Examples</h2>
+      <p>
+        Find more examples in the GitHub repository:
+      </p>
+      <ul class="example-links">
+        <li>
+          <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/examples"
+             target="_blank"
+             rel="noopener">
+            <fa-icon [icon]="['fab', 'github']" class="mr-2"></fa-icon>
+            examples/ directory on GitHub
+            <fa-icon [icon]="['fas', 'external-link']" class="ml-2 text-xs"></fa-icon>
+          </a>
+        </li>
+      </ul>
+
+      <div class="contribute-card">
+        <h4><fa-icon [icon]="['fas', 'lightbulb']" class="mr-2 text-yellow-400"></fa-icon>Have an example to share?</h4>
+        <p>
+          We welcome contributions! Open a PR with your example in the
+          <a href="https://github.com/pegasusheavy/dependency-injector" target="_blank" rel="noopener">GitHub repository</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
