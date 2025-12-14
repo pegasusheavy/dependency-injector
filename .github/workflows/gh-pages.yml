@@ -65,6 +65,19 @@ jobs:
       - name: Add .nojekyll file
         run: touch docs/dist/docs/browser/.nojekyll
 
+      - name: Fetch existing benchmark data
+        run: |
+          # Clone just the benchmarks directory from gh-pages if it exists
+          git fetch origin gh-pages --depth=1 || true
+          if git show origin/gh-pages:benchmarks/data.js > /dev/null 2>&1; then
+            mkdir -p docs/dist/docs/browser/benchmarks
+            git show origin/gh-pages:benchmarks/data.js > docs/dist/docs/browser/benchmarks/data.js
+            echo "Preserved existing benchmark data"
+            head -20 docs/dist/docs/browser/benchmarks/data.js
+          else
+            echo "No existing benchmark data found"
+          fi
+
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
