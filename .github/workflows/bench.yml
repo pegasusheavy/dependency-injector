@@ -54,16 +54,11 @@ jobs:
           with open('benchmark-output.txt', 'r') as f:
               content = f.read()
 
-          # Debug: print last part of output to see format
-          print("=== Last 2000 chars of benchmark output ===")
-          print(content[-2000:] if len(content) > 2000 else content)
-          print("=== End of output ===")
-
-          # Criterion output format (name on separate line):
-          # group/benchmark_name
-          #                         time:   [1.234 µs 1.345 µs 1.456 µs]
-          # Pattern matches benchmark name followed by time line
-          pattern = r'([\w/]+)\s+time:\s+\[(\d+\.?\d*)\s*(\S+)\s+(\d+\.?\d*)\s*(\S+)\s+(\d+\.?\d*)\s*(\S+)\]'
+          # Criterion output formats:
+          # 1. "benchmark/name   time:   [1.234 ns 1.345 ns 1.456 ns]"
+          # 2. "benchmark/name\n                        time:   [1.234 ns 1.345 ns 1.456 ns]"
+          # Match benchmark name followed by time (with optional whitespace/newline)
+          pattern = r'([\w/_-]+(?:/[\w/_-]+)*)\s+time:\s+\[(\d+\.?\d*)\s*(\S+)\s+(\d+\.?\d*)\s*(\S+)\s+(\d+\.?\d*)\s*(\S+)\]'
 
           for match in re.finditer(pattern, content):
               name = match.group(1)
