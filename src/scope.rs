@@ -241,6 +241,7 @@ impl std::fmt::Debug for ScopedContainer {
 /// // Each scope gets its own services
 /// ```
 pub struct ScopeBuilder {
+    #[allow(clippy::type_complexity)]
     factories: Vec<Box<dyn Fn(&Container) + Send + Sync>>,
 }
 
@@ -273,7 +274,7 @@ impl ScopeBuilder {
     {
         self.factories.push(Box::new(move |container| {
             let f = factory.clone();
-            container.lazy(move || f());
+            container.lazy(f);
         }));
         self
     }
@@ -286,7 +287,7 @@ impl ScopeBuilder {
     {
         self.factories.push(Box::new(move |container| {
             let f = factory.clone();
-            container.transient(move || f());
+            container.transient(f);
         }));
         self
     }

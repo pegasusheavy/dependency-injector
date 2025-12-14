@@ -254,6 +254,7 @@ impl Container {
 
     /// Register a boxed instance.
     #[inline]
+    #[allow(clippy::boxed_local)]
     pub fn register_boxed<T: Injectable>(&self, instance: Box<T>) {
         self.singleton(*instance);
     }
@@ -323,15 +324,15 @@ impl Container {
     fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId) -> Result<Arc<T>> {
         if let Some(weak) = self.parent.as_ref() {
             if let Some(storage) = weak.upgrade() {
-                if let Some(arc) = storage.resolve(type_id) {
-                    if let Ok(typed) = arc.downcast::<T>() {
-                        #[cfg(feature = "tracing")]
-                        trace!(
-                            service = std::any::type_name::<T>(),
-                            "Found in parent scope"
-                        );
-                        return Ok(typed);
-                    }
+                if let Some(arc) = storage.resolve(type_id)
+                    && let Ok(typed) = arc.downcast::<T>()
+                {
+                    #[cfg(feature = "tracing")]
+                    trace!(
+                        service = std::any::type_name::<T>(),
+                        "Found in parent scope"
+                    );
+                    return Ok(typed);
                 }
                 // Single-level parent resolution for now
                 // TODO: Support deep hierarchies by storing parent ref in storage
@@ -403,12 +404,11 @@ impl Container {
         }
 
         // Check parent chain
-        if let Some(weak) = self.parent.as_ref() {
-            if let Some(storage) = weak.upgrade() {
-                if storage.contains(type_id) {
-                    return true;
-                }
-            }
+        if let Some(weak) = self.parent.as_ref()
+            && let Some(storage) = weak.upgrade()
+            && storage.contains(type_id)
+        {
+            return true;
         }
 
         false
