@@ -39,7 +39,7 @@ jobs:
         run: |
           # Run benchmarks and capture output (specify bench target to avoid running lib tests)
           cargo bench --all-features --bench container_bench 2>&1 | tee benchmark-output.txt
-          echo "=== Benchmark output captured ===" 
+          echo "=== Benchmark output captured ==="
           tail -100 benchmark-output.txt
 
       - name: Parse benchmark results to JSON
@@ -47,27 +47,32 @@ jobs:
           python3 << 'EOF'
           import json
           import re
-          import sys
-          from datetime import datetime
+          from datetime import datetime, timezone
 
           results = []
-          current_group = None
 
           with open('benchmark-output.txt', 'r') as f:
               content = f.read()
 
-          # Match Criterion benchmark output
-          # Pattern: "benchmark_name    time:   [lower_bound upper_bound median]"
-          pattern = r'(\S+)\s+time:\s+\[(\d+\.?\d*)\s*(\w+)\s+(\d+\.?\d*)\s*(\w+)\s+(\d+\.?\d*)\s*(\w+)\]'
+          # Debug: print last part of output to see format
+          print("=== Last 2000 chars of benchmark output ===")
+          print(content[-2000:] if len(content) > 2000 else content)
+          print("=== End of output ===")
+
+          # Criterion output format (name on separate line):
+          # group/benchmark_name
+          #                         time:   [1.234 µs 1.345 µs 1.456 µs]
+          # Pattern matches benchmark name followed by time line
+          pattern = r'([\w/]+)\s+time:\s+\[(\d+\.?\d*)\s*(\S+)\s+(\d+\.?\d*)\s*(\S+)\s+(\d+\.?\d*)\s*(\S+)\]'
 
           for match in re.finditer(pattern, content):
               name = match.group(1)
               lower = float(match.group(2))
               lower_unit = match.group(3)
-              upper = float(match.group(4))
-              upper_unit = match.group(5)
-              median = float(match.group(6))
-              median_unit = match.group(7)
+              median = float(match.group(4))
+              median_unit = match.group(5)
+              upper = float(match.group(6))
+              upper_unit = match.group(7)
 
               # Convert to nanoseconds for consistency
               def to_ns(value, unit):
@@ -78,27 +83,12 @@ jobs:
                   'name': name,
                   'value': to_ns(median, median_unit),
                   'unit': 'ns',
-                  'range': f'± {to_ns(upper - lower, upper_unit) / 2:.2f}',
+                  'range': f'± {to_ns((upper - lower) / 2, upper_unit):.2f}',
                   'extra': f'median: {median} {median_unit}'
               })
 
-          # If no Criterion output, try to parse simpler format
-          if not results:
-              # Match "test benchmark_name ... bench: X ns/iter (+/- Y)"
-              pattern2 = r'test\s+(\S+)\s+\.\.\.\s+bench:\s+([\d,]+)\s+ns/iter\s+\(\+/-\s+([\d,]+)\)'
-              for match in re.finditer(pattern2, content):
-                  name = match.group(1)
-                  value = int(match.group(2).replace(',', ''))
-                  variance = int(match.group(3).replace(',', ''))
-                  results.append({
-                      'name': name,
-                      'value': value,
-                      'unit': 'ns/iter',
-                      'range': f'± {variance}'
-                  })
-
           output = {
-              'timestamp': datetime.utcnow().isoformat() + 'Z',
+              'timestamp': datetime.now(timezone.utc).isoformat(),
               'commit': '${{ github.sha }}',
               'results': results
           }
