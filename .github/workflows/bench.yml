@@ -36,7 +36,11 @@ jobs:
             ${{ runner.os }}-cargo-bench-
 
       - name: Run benchmarks
-        run: cargo bench --all-features -- --noplot --save-baseline main 2>&1 | tee benchmark-output.txt
+        run: |
+          # Run benchmarks and capture output
+          cargo bench --all-features -- --noplot 2>&1 | tee benchmark-output.txt
+          echo "=== Benchmark output captured ===" 
+          tail -50 benchmark-output.txt
 
       - name: Parse benchmark results to JSON
         run: |
@@ -109,6 +113,7 @@ jobs:
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         if: github.event_name != 'pull_request'
+        continue-on-error: true
         with:
           name: Rust Benchmarks
           tool: 'cargo'
