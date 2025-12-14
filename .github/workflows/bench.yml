@@ -37,10 +37,10 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          # Run benchmarks and capture output
-          cargo bench --all-features -- --noplot 2>&1 | tee benchmark-output.txt
-          echo "=== Benchmark output captured ==="
-          tail -50 benchmark-output.txt
+          # Run benchmarks and capture output (specify bench target to avoid running lib tests)
+          cargo bench --all-features --bench container_bench 2>&1 | tee benchmark-output.txt
+          echo "=== Benchmark output captured ===" 
+          tail -100 benchmark-output.txt
 
       - name: Parse benchmark results to JSON
         run: |
