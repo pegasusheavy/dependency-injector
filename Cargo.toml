@@ -2,6 +2,7 @@
 name = "dependency-injector"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 description = "High-performance, lock-free dependency injection container for Rust"
 license = "MIT OR Apache-2.0"
 keywords = ["dependency-injection", "di", "ioc", "container", "service-locator"]
