@@ -173,10 +173,8 @@ mod tests {
     fn test_lazy_factory() {
         static COUNTER: AtomicU32 = AtomicU32::new(0);
 
-        let factory = LazyFactory::new(|| {
-            TestService {
-                id: COUNTER.fetch_add(1, Ordering::SeqCst),
-            }
+        let factory = LazyFactory::new(|| TestService {
+            id: COUNTER.fetch_add(1, Ordering::SeqCst),
         });
 
         assert_eq!(COUNTER.load(Ordering::SeqCst), 0);
@@ -206,4 +204,3 @@ mod tests {
         assert!(!Arc::ptr_eq(&a, &b));
     }
 }
-

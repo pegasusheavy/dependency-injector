@@ -3,8 +3,8 @@
 //! Provides utilities for working with scoped service lifetimes.
 
 use crate::{Container, Injectable, Result};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Unique scope identifier.
 ///
@@ -325,9 +325,7 @@ mod tests {
         root.singleton(GlobalService);
 
         let scoped = ScopedContainer::from_parent(&root);
-        scoped.singleton(RequestService {
-            id: "req-1".into(),
-        });
+        scoped.singleton(RequestService { id: "req-1".into() });
 
         // Can access both
         assert!(scoped.contains::<GlobalService>());
@@ -352,8 +350,7 @@ mod tests {
         let root = Container::new();
         root.singleton(GlobalService);
 
-        let builder = ScopeBuilder::new()
-            .with_singleton(|| RequestService { id: "built".into() });
+        let builder = ScopeBuilder::new().with_singleton(|| RequestService { id: "built".into() });
 
         let scoped = builder.build(&root);
 

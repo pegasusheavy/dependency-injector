@@ -1,6 +1,6 @@
 //! Benchmarks for the DI container
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use dependency_injector::Container;
 use std::hint::black_box;
 use std::sync::Arc;

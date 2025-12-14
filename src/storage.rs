@@ -128,7 +128,10 @@ mod tests {
         let storage = ServiceStorage::new();
         let type_id = TypeId::of::<TestService>();
 
-        storage.insert(type_id, AnyFactory::new(SingletonFactory::new(TestService { value: 42 })));
+        storage.insert(
+            type_id,
+            AnyFactory::new(SingletonFactory::new(TestService { value: 42 })),
+        );
 
         let service = storage.get::<TestService>().unwrap();
         assert_eq!(service.value, 42);
@@ -141,7 +144,10 @@ mod tests {
 
         assert!(!storage.contains(&type_id));
 
-        storage.insert(type_id, AnyFactory::new(SingletonFactory::new(TestService { value: 0 })));
+        storage.insert(
+            type_id,
+            AnyFactory::new(SingletonFactory::new(TestService { value: 0 })),
+        );
 
         assert!(storage.contains(&type_id));
     }
@@ -151,11 +157,13 @@ mod tests {
         let storage = ServiceStorage::new();
         let type_id = TypeId::of::<TestService>();
 
-        storage.insert(type_id, AnyFactory::new(SingletonFactory::new(TestService { value: 0 })));
+        storage.insert(
+            type_id,
+            AnyFactory::new(SingletonFactory::new(TestService { value: 0 })),
+        );
         assert!(storage.contains(&type_id));
 
         storage.remove(&type_id);
         assert!(!storage.contains(&type_id));
     }
 }
-

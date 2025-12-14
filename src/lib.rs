@@ -122,8 +122,7 @@ pub use std::sync::Arc;
 /// Prelude for convenient imports
 pub mod prelude {
     pub use crate::{
-        Container, DiError, Factory, Injectable, Lifetime, Provider, Result, Scope,
-        ScopedContainer,
+        Container, DiError, Factory, Injectable, Lifetime, Provider, Result, Scope, ScopedContainer,
     };
     pub use std::sync::Arc;
 }
@@ -147,9 +146,7 @@ mod tests {
     #[test]
     fn test_singleton_registration() {
         let container = Container::new();
-        container.singleton(Database {
-            url: "test".into(),
-        });
+        container.singleton(Database { url: "test".into() });
 
         let db = container.get::<Database>().unwrap();
         assert_eq!(db.url, "test");
@@ -158,9 +155,7 @@ mod tests {
     #[test]
     fn test_multiple_resolve_same_instance() {
         let container = Container::new();
-        container.singleton(Database {
-            url: "test".into(),
-        });
+        container.singleton(Database { url: "test".into() });
 
         let db1 = container.get::<Database>().unwrap();
         let db2 = container.get::<Database>().unwrap();
@@ -177,9 +172,7 @@ mod tests {
         struct Counter(u32);
 
         let container = Container::new();
-        container.transient(|| {
-            Counter(COUNTER.fetch_add(1, Ordering::SeqCst))
-        });
+        container.transient(|| Counter(COUNTER.fetch_add(1, Ordering::SeqCst)));
 
         let c1 = container.get::<Counter>().unwrap();
         let c2 = container.get::<Counter>().unwrap();
@@ -213,9 +206,7 @@ mod tests {
     #[test]
     fn test_scoped_container() {
         let root = Container::new();
-        root.singleton(Database {
-            url: "root".into(),
-        });
+        root.singleton(Database { url: "root".into() });
 
         let child = root.scope();
         child.singleton(UserService {
@@ -246,9 +237,7 @@ mod tests {
         });
 
         let test_scope = root.scope();
-        test_scope.singleton(Database {
-            url: "test".into(),
-        });
+        test_scope.singleton(Database { url: "test".into() });
 
         // Root has production
         let root_db = root.get::<Database>().unwrap();

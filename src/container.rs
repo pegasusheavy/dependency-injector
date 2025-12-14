@@ -151,7 +151,10 @@ impl Container {
         let type_id = TypeId::of::<T>();
 
         #[cfg(feature = "tracing")]
-        trace!(service = std::any::type_name::<T>(), "Registering singleton");
+        trace!(
+            service = std::any::type_name::<T>(),
+            "Registering singleton"
+        );
 
         self.storage
             .insert(type_id, AnyFactory::new(SingletonFactory::new(instance)));
@@ -184,7 +187,10 @@ impl Container {
         let type_id = TypeId::of::<T>();
 
         #[cfg(feature = "tracing")]
-        trace!(service = std::any::type_name::<T>(), "Registering lazy singleton");
+        trace!(
+            service = std::any::type_name::<T>(),
+            "Registering lazy singleton"
+        );
 
         self.storage
             .insert(type_id, AnyFactory::new(LazyFactory::new(factory)));
@@ -222,7 +228,10 @@ impl Container {
         let type_id = TypeId::of::<T>();
 
         #[cfg(feature = "tracing")]
-        trace!(service = std::any::type_name::<T>(), "Registering transient");
+        trace!(
+            service = std::any::type_name::<T>(),
+            "Registering transient"
+        );
 
         self.storage
             .insert(type_id, AnyFactory::new(TransientFactory::new(factory)));
@@ -263,7 +272,8 @@ impl Container {
             }
         }
 
-        self.storage.insert(type_id, AnyFactory::new(ArcFactory(instance)));
+        self.storage
+            .insert(type_id, AnyFactory::new(ArcFactory(instance)));
     }
 
     // =========================================================================
@@ -298,7 +308,10 @@ impl Container {
         // Try local storage first (most common case)
         if let Some(service) = self.storage.get::<T>() {
             #[cfg(feature = "tracing")]
-            trace!(service = std::any::type_name::<T>(), "Found in current scope");
+            trace!(
+                service = std::any::type_name::<T>(),
+                "Found in current scope"
+            );
             return Ok(service);
         }
 
@@ -313,7 +326,10 @@ impl Container {
                 if let Some(arc) = storage.resolve(type_id) {
                     if let Ok(typed) = arc.downcast::<T>() {
                         #[cfg(feature = "tracing")]
-                        trace!(service = std::any::type_name::<T>(), "Found in parent scope");
+                        trace!(
+                            service = std::any::type_name::<T>(),
+                            "Found in parent scope"
+                        );
                         return Ok(typed);
                     }
                 }
