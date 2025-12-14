@@ -500,6 +500,7 @@ mod tests {
         value: String,
     }
 
+    #[allow(dead_code)]
     #[derive(Clone)]
     struct AnotherService {
         name: String,

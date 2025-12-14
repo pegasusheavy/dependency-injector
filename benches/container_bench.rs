@@ -1,20 +1,24 @@
 //! Benchmarks for the DI container
 
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use dependency_injector::Container;
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use std::hint::black_box;
 use std::sync::Arc;
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct SmallService {
     value: i32,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct MediumService {
     name: String,
     values: Vec<i32>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct LargeService {
     data: Vec<u8>,
@@ -208,4 +212,3 @@ criterion_group!(
 );
 
 criterion_main!(benches);
-

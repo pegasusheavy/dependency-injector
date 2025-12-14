@@ -138,6 +138,7 @@ mod tests {
         url: String,
     }
 
+    #[allow(dead_code)]
     #[derive(Clone)]
     struct UserService {
         name: String,
