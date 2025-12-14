@@ -121,7 +121,7 @@ jobs:
           fail-on-alert: false
 
       - name: Upload benchmark results artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: |
