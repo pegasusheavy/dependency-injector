@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-12-14
+
+### Fixed
+
+- Updated MSRV to 1.85.0 for Edition 2024 support
+- Fixed deprecated `criterion::black_box` usage (now uses `std::hint::black_box`)
+- Resolved all Clippy warnings (collapsible_if, redundant_closure, type_complexity)
+- Fixed dead_code warnings in test modules
+- Corrected `dtolnay/rust-action` to `dtolnay/rust-toolchain` in CI workflows
+- Improved benchmark workflow robustness
+
+### Changed
+
+- Upgraded GitHub Actions versions (upload-artifact v6, github-script v8, action-gh-release v2, codecov-action v5)
+
 ## [0.1.0] - 2025-12-14
 
 ### Added
@@ -54,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lock-free design eliminates deadlock possibilities
 - No unsafe code in public API
 
-[Unreleased]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pegasusheavy/dependency-injector/releases/tag/v0.1.0
 

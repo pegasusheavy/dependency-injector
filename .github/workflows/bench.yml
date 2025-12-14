@@ -39,7 +39,7 @@ jobs:
         run: |
           # Run benchmarks and capture output
           cargo bench --all-features -- --noplot 2>&1 | tee benchmark-output.txt
-          echo "=== Benchmark output captured ===" 
+          echo "=== Benchmark output captured ==="
           tail -50 benchmark-output.txt
 
       - name: Parse benchmark results to JSON
