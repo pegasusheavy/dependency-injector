@@ -83,17 +83,22 @@ impl HotCache {
     }
 
     /// Calculate slot index from TypeId and storage pointer
+    ///
+    /// Uses fast bit mixing instead of full hashing for performance.
+    /// TypeId is already a well-distributed hash, so we just mix it with storage_ptr.
     #[inline]
     fn slot_for(type_id: &TypeId, storage_ptr: usize) -> usize {
-        // Combine TypeId hash with storage pointer for unique slot
-        let hash = {
-            use std::hash::{Hash, Hasher};
-            let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            type_id.hash(&mut hasher);
-            storage_ptr.hash(&mut hasher);
-            hasher.finish()
-        };
-        (hash as usize) & (HOT_CACHE_SLOTS - 1)
+        // TypeId is internally a u128 hash - extract it and mix with storage_ptr
+        // SAFETY: TypeId is #[repr(transparent)] wrapper around u128
+        let type_id_bits: u64 = unsafe { std::mem::transmute_copy(type_id) };
+
+        // Fast bit mixing: XOR with rotated storage_ptr for good distribution
+        let mixed = type_id_bits ^ (storage_ptr as u64).rotate_left(32);
+
+        // Use golden ratio multiplication for final mixing (fast & good distribution)
+        let slot = mixed.wrapping_mul(0x9e3779b97f4a7c15);
+
+        (slot as usize) & (HOT_CACHE_SLOTS - 1)
     }
 }
 
@@ -443,6 +448,8 @@ impl Container {
     #[inline]
     fn get_and_cache<T: Injectable>(&self, storage_ptr: usize) -> Result<Arc<T>> {
         let type_id = TypeId::of::<T>();
+
+        #[cfg(feature = "logging")]
         let type_name = std::any::type_name::<T>();
 
         #[cfg(feature = "logging")]
@@ -454,7 +461,8 @@ impl Container {
         );
 
         // Try local storage first (most common case)
-        if let Some(service) = self.storage.get::<T>() {
+        // Use get_with_transient_flag to avoid second DashMap lookup for is_transient
+        if let Some((service, is_transient)) = self.storage.get_with_transient_flag::<T>() {
             #[cfg(feature = "logging")]
             trace!(
                 target: "dependency_injector",
@@ -465,7 +473,7 @@ impl Container {
             );
 
             // Cache non-transient services (transients create new instances each time)
-            if !self.storage.is_transient(&type_id) {
+            if !is_transient {
                 HOT_CACHE.with(|cache| cache.borrow_mut().insert(storage_ptr, Arc::clone(&service)));
             }
 

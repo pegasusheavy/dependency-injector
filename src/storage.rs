@@ -137,6 +137,22 @@ impl ServiceStorage {
         })
     }
 
+    /// Resolve and return both the service and whether it's transient.
+    ///
+    /// This avoids a second DashMap lookup when checking if the service should be cached.
+    /// Returns `Some((service, is_transient))` if found, `None` if not found.
+    #[inline]
+    pub fn get_with_transient_flag<T: Send + Sync + 'static>(&self) -> Option<(Arc<T>, bool)> {
+        let type_id = TypeId::of::<T>();
+        self.factories.get(&type_id).map(|factory| {
+            let is_transient = factory.is_transient();
+            let service = factory.resolve();
+            // SAFETY: We looked up by TypeId::of::<T>(), so the factory stores type T.
+            let typed = unsafe { downcast_arc_unchecked(service) };
+            (typed, is_transient)
+        })
+    }
+
     /// Resolve a service by walking the full parent chain.
     ///
     /// Returns the service from the nearest scope that has it registered.
