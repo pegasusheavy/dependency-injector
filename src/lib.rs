@@ -122,6 +122,10 @@ pub use scope::*;
 #[cfg(feature = "logging")]
 pub use tracing::{debug, error, info, trace, warn};
 
+// Re-export derive macros when feature is enabled
+#[cfg(feature = "derive")]
+pub use dependency_injector_derive::Inject;
+
 // Re-export for convenience
 pub use std::sync::Arc;
 
@@ -132,6 +136,9 @@ pub mod prelude {
         ScopedContainer,
     };
     pub use std::sync::Arc;
+
+    #[cfg(feature = "derive")]
+    pub use crate::Inject;
 }
 
 #[cfg(test)]

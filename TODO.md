@@ -1,6 +1,6 @@
 # Performance Optimization TODO
 
-> Benchmarking and profiling analysis for dependency-injector v0.1.4
+> Benchmarking and profiling analysis for dependency-injector v0.1.5
 
 ## Benchmark Results Summary
 
@@ -46,6 +46,16 @@ Phase 3 added developer ergonomics and maintained performance:
 - **Contains check** improved **6%** (~11ns → ~10.8ns)
 - Hot cache optimization was skipped (DashMap already ~11ns, not worth complexity)
 - Arena allocation for transients was skipped (requires external dependency)
+
+### Phase 4 Results (Completed)
+
+Phase 4 added compile-time dependency injection support:
+
+- **`#[derive(Inject)]` macro** - Automatic dependency resolution at compile time
+- **`#[inject]` attribute** - Mark fields for automatic injection
+- **`#[inject(optional)]` attribute** - Support for optional dependencies (`Option<Arc<T>>`)
+- **`from_container()` method** - Generated method for creating instances from container
+- SIMD TypeId comparison skipped (modern CPUs already handle 128-bit TypeId efficiently, ahash is highly optimized)
 
 ---
 
@@ -430,9 +440,9 @@ impl ServiceStorage {
 - [~] #5: Hot cache - skipped (DashMap already ~11ns, not worth added complexity)
 - [~] #6: Arena allocation - skipped (requires external dependency like `bumpalo`)
 
-### Phase 4: Future Considerations
-- [ ] #11: Compile-time DI macro
-- [ ] #10: SIMD TypeId comparison
+### Phase 4: Compile-Time Features ✅ COMPLETED
+- [x] #11: Compile-time DI macro (`#[derive(Inject)]`, `#[inject]`, `from_container()`)
+- [~] #10: SIMD TypeId comparison - skipped (modern CPUs already efficient for 128-bit TypeId)
 
 ---
 
@@ -481,8 +491,17 @@ cargo flamegraph --bench container_bench -- --bench
 - Concurrent reads improved another ~18% (~115µs → ~94µs)
 - Added batch registration benchmark
 
+### v0.1.5 (Phase 4 - Compile-Time DI)
+- Added `dependency-injector-derive` proc-macro crate
+- New `derive` feature for compile-time dependency injection
+- `#[derive(Inject)]` macro generates `from_container()` method
+- `#[inject]` attribute marks fields for automatic resolution
+- `#[inject(optional)]` supports optional dependencies with `Option<Arc<T>>`
+- Non-injected fields use `Default::default()`
+- Added derive example demonstrating usage
+
 ---
 
 *Last updated: 2024-12-20*
-*Based on v0.1.4 benchmark results*
+*Based on v0.1.5 benchmark results*
 

@@ -38,6 +38,7 @@ dependency-injector = { version = "0.1", features = ["logging-json"] }
 | `logging-json` | JSON structured logging output (recommended for production) |
 | `logging-pretty` | Colorful pretty logging output (recommended for development) |
 | `async` | Async support with Tokio |
+| `derive` | Compile-time dependency injection with `#[derive(Inject)]` |
 
 ## Quick Start
 
@@ -155,6 +156,54 @@ assert_eq!(root_db.url, "production");
 let test_db = test_scope.get::<Database>().unwrap();
 assert_eq!(test_db.url, "test");
 ```
+
+## Compile-Time Injection (derive feature)
+
+Use the `#[derive(Inject)]` macro for automatic dependency resolution:
+
+```rust
+use dependency_injector::{Container, Inject};
+use std::sync::Arc;
+
+#[derive(Clone)]
+struct Database {
+    url: String,
+}
+
+#[derive(Clone)]
+struct Cache {
+    size: usize,
+}
+
+// Derive Inject to generate from_container() method
+#[derive(Inject)]
+struct UserService {
+    #[inject]
+    db: Arc<Database>,
+    #[inject]
+    cache: Arc<Cache>,
+    #[inject(optional)]
+    logger: Option<Arc<Logger>>,  // Optional dependency
+    request_count: u64,            // Uses Default::default()
+}
+
+fn main() {
+    let container = Container::new();
+    container.singleton(Database { url: "postgres://localhost".into() });
+    container.singleton(Cache { size: 1024 });
+
+    // Automatically resolve all #[inject] fields
+    let service = UserService::from_container(&container).unwrap();
+}
+```
+
+### Inject Attributes
+
+| Attribute | Field Type | Description |
+|-----------|------------|-------------|
+| `#[inject]` | `Arc<T>` | Required dependency - fails if not registered |
+| `#[inject(optional)]` | `Option<Arc<T>>` | Optional dependency - `None` if not registered |
+| (none) | Any type with `Default` | Uses `Default::default()` |
 
 ## Framework Integration
 
