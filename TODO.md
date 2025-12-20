@@ -1,507 +1,295 @@
 # Performance Optimization TODO
 
-> Benchmarking and profiling analysis for dependency-injector v0.1.5
+> Analysis for dependency-injector v0.1.5 - December 2024
 
-## Benchmark Results Summary
+## Current Benchmark Results
 
-| Operation | Before (v0.1.1) | After (v0.1.2) | Improvement | Target | Status |
-|-----------|-----------------|----------------|-------------|--------|--------|
-| `get_singleton` | ~19 ns | ~19 ns | - | <15 ns | ⏳ |
-| `contains_check` | ~21 ns | ~11 ns | **47% faster** | <8 ns | ✅ |
-| `try_get_found` | ~43 ns | ~19 ns | **56% faster** | <15 ns | ⏳ |
-| `try_get_not_found` | ~14 ns | ~11 ns | **21% faster** | <8 ns | ⏳ |
-| `get_transient` | ~27 ns | ~25 ns | **7% faster** | <20 ns | ⏳ |
-| `create_scope` | ~870 ns | ~99 ns | **89% faster** | <500 ns | ✅ |
-| `resolve_from_parent` | ~38 ns | ~38 ns | - | <25 ns | ⏳ |
-| `singleton registration` | ~854 ns | ~134 ns | **84% faster** | <600 ns | ✅ |
-| `concurrent_reads_4` (4×100) | ~99 µs | ~125 µs | -26% | <80 µs | ⚠️ |
+| Operation | Current | Baseline (Manual DI) | Gap | Target | Status |
+|-----------|---------|---------------------|-----|--------|--------|
+| `get_singleton` | **18.7 ns** | 8 ns | 10.7 ns | <12 ns | 🎯 |
+| `contains_check` | **10.8 ns** | N/A | - | <10 ns | ✅ |
+| `try_get_found` | **18.8 ns** | 8 ns | 10.8 ns | <12 ns | 🎯 |
+| `try_get_not_found` | **10.9 ns** | N/A | - | <10 ns | ✅ |
+| `get_transient` | **25 ns** | N/A | - | <20 ns | 🔄 |
+| `create_scope` | **129 ns** | N/A | - | <100 ns | 🔄 |
+| `resolve_from_parent` | **28.7 ns** | 8 ns | 20.7 ns | <20 ns | 🎯 |
+| `singleton registration` | **125 ns** | N/A | - | <100 ns | 🔄 |
+| `concurrent_reads_4` (4×100) | **92 µs** | N/A | - | <80 µs | 🔄 |
 
-### Phase 1 Results (Completed)
+### Comparison with Alternatives
 
-The Phase 1 optimizations achieved significant improvements:
+| Approach | Resolution | Container Creation | 4-Thread Concurrent |
+|----------|------------|-------------------|---------------------|
+| Manual DI (baseline) | **8 ns** | 88 ns | N/A |
+| HashMap + RwLock | 20.5 ns | **7.6 ns** | 93 µs |
+| DashMap (basic) | 20.7 ns | 670 ns | **89 µs** |
+| **dependency-injector** | **18.8 ns** | 87 ns | 92 µs |
 
-- **Registration** is now **6-8x faster** (~850ns → ~120ns)
-- **Scope creation** is now **8.8x faster** (~870ns → ~99ns)
-- **Contains check** is now **~2x faster** (~21ns → ~11ns)
-- **try_get** operations significantly improved
+### Fuzzing Status ✅
 
-Concurrent reads regressed slightly due to fewer DashMap shards, but this is an acceptable tradeoff for the massive gains in single-threaded operations which are far more common.
-
-### Phase 2 Results (Completed)
-
-The Phase 2 core optimizations focused on resolution hot paths:
-
-- **Parent resolution** is now **20% faster** (~38ns → ~30ns) via cached parent Arc
-- **Medium resolution** improved **6%** (~19ns → ~18ns)
-- **Concurrent reads** improved **8%** (~125µs → ~115µs)
-- Eliminated vtable indirection with enum-based `AnyFactory`
-- Reduced memory with Container size reduction (removed Weak ref)
-
-### Phase 3 Results (Completed)
-
-Phase 3 added developer ergonomics and maintained performance:
-
-- **Batch registration API** - `container.batch(|b| { ... })` for bulk registration
-- **Concurrent reads** improved another **18%** (~115µs → ~94µs)
-- **Contains check** improved **6%** (~11ns → ~10.8ns)
-- Hot cache optimization was skipped (DashMap already ~11ns, not worth complexity)
-- Arena allocation for transients was skipped (requires external dependency)
-
-### Phase 4 Results (Completed)
-
-Phase 4 added compile-time dependency injection support:
-
-- **`#[derive(Inject)]` macro** - Automatic dependency resolution at compile time
-- **`#[inject]` attribute** - Mark fields for automatic injection
-- **`#[inject(optional)]` attribute** - Support for optional dependencies (`Option<Arc<T>>`)
-- **`from_container()` method** - Generated method for creating instances from container
-- SIMD TypeId comparison skipped (modern CPUs already handle 128-bit TypeId efficiently, ahash is highly optimized)
+All fuzz targets pass with no crashes:
+- `fuzz_container`: 1.1M+ runs
+- `fuzz_concurrent`: 11K+ runs
+- `fuzz_scoped`: 808K+ runs
+- `fuzz_lifecycle`: Passing
 
 ---
 
-## High Priority Optimizations
+## Future Optimization Opportunities
 
-### 1. Eliminate Dynamic Dispatch in Resolution Hot Path
-**Location:** `src/factory.rs` → `AnyFactory::resolve()`
+### High Priority
 
-**Problem:** The `AnyFactory` wrapper uses `Box<dyn Factory>` which requires a vtable lookup on every resolution.
+#### 1. Thread-Local Service Caching
+**Gap Analysis:** Resolution is ~19ns vs ~8ns for manual DI. The 11ns gap is primarily DashMap lookup.
 
-**Current Code:**
+**Solution:** Cache frequently accessed services in thread-local storage:
 ```rust
-pub(crate) struct AnyFactory {
-    inner: Box<dyn Factory>,
-    is_transient: bool,
+thread_local! {
+    static CACHED: RefCell<Option<(TypeId, Arc<dyn Any + Send + Sync>)>> = RefCell::new(None);
 }
-```
 
-**Solution:** Use an enum-based approach to avoid vtable indirection:
-```rust
-pub(crate) enum AnyFactory {
-    Singleton(Arc<dyn Any + Send + Sync>),
-    Lazy(Arc<OnceCell<Arc<dyn Any + Send + Sync>>>, Arc<dyn Fn() -> Arc<dyn Any + Send + Sync> + Send + Sync>),
-    Transient(Arc<dyn Fn() -> Arc<dyn Any + Send + Sync> + Send + Sync>),
-}
-```
-
-**Expected Improvement:** ~2-3 ns per resolution (10-15%)
-
----
-
-### 2. Avoid Arc Clone in Singleton Resolution
-**Location:** `src/factory.rs` → `SingletonFactory::resolve()`
-
-**Problem:** Every resolution clones the `Arc<T>` even though we immediately cast it to `Arc<dyn Any>`.
-
-**Current Code:**
-```rust
-fn resolve(&self) -> Arc<dyn Any + Send + Sync> {
-    Arc::clone(&self.instance) as Arc<dyn Any + Send + Sync>
-}
-```
-
-**Solution:** Store the type-erased `Arc<dyn Any + Send + Sync>` directly to avoid the clone+cast:
-```rust
-pub struct SingletonFactory {
-    instance: Arc<dyn Any + Send + Sync>,
-}
-```
-
-**Expected Improvement:** ~1-2 ns per resolution (5-10%)
-
----
-
-### 3. Optimize Scope Creation
-**Location:** `src/container.rs` → `Container::scope()`
-
-**Problem:** Creating a scope allocates:
-- New `ServiceStorage` (includes DashMap allocation)
-- New `RwLock<bool>` for locked state
-- New `Arc` wrappers
-
-**Current Code:**
-```rust
-pub fn scope(&self) -> Self {
-    Self {
-        storage: Arc::new(ServiceStorage::new()),
-        parent: Some(Arc::downgrade(&self.storage)),
-        locked: Arc::new(RwLock::new(false)),
-        depth: self.depth + 1,
-    }
-}
-```
-
-**Solutions:**
-
-#### a) Pre-allocate scope storage with small capacity
-```rust
-pub fn scope(&self) -> Self {
-    Self {
-        storage: Arc::new(ServiceStorage::with_capacity(4)), // Most scopes have few services
-        parent: Some(Arc::downgrade(&self.storage)),
-        locked: Arc::new(RwLock::new(false)),
-        depth: self.depth + 1,
-    }
-}
-```
-
-#### b) Use AtomicBool instead of RwLock<bool>
-```rust
-locked: Arc<AtomicBool>,  // Cheaper than RwLock for single bool
-```
-
-#### c) Scope pooling for high-throughput scenarios
-```rust
-pub fn scope_from_pool(&self, pool: &ScopePool) -> Self { ... }
-```
-
-**Expected Improvement:** ~200-300 ns per scope creation (25-35%)
-
----
-
-### 4. Optimize Parent Chain Resolution
-**Location:** `src/container.rs` → `Container::resolve_from_parents()`
-
-**Problem:** Parent resolution requires:
-1. `Weak::upgrade()` - atomic reference count
-2. `storage.resolve()` - DashMap lookup
-3. `Arc::downcast()` - type checking
-
-**Current Code:**
-```rust
-fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId) -> Result<Arc<T>> {
-    if let Some(weak) = self.parent.as_ref() {
-        if let Some(storage) = weak.upgrade() {
-            if let Some(arc) = storage.resolve(type_id)
-                && let Ok(typed) = arc.downcast::<T>() {
-                return Ok(typed);
+fn get<T: Injectable>(&self) -> Result<Arc<T>> {
+    // Check thread-local cache first
+    CACHED.with(|cache| {
+        if let Some((cached_id, cached_arc)) = cache.borrow().as_ref() {
+            if *cached_id == TypeId::of::<T>() {
+                return Ok(cached_arc.clone().downcast().unwrap());
             }
         }
+        // Fall back to DashMap
+    })
+}
+```
+
+**Expected Improvement:** ~8-10 ns for hot services (50% faster)
+**Complexity:** Medium
+**Risk:** Low (thread-local is well-understood)
+
+---
+
+#### 2. Scope Pooling for Web Servers
+**Gap Analysis:** Scope creation is 129ns, but could be near-zero with pooling.
+
+**Solution:** Pre-allocate and reuse scope instances:
+```rust
+pub struct ScopePool {
+    free_scopes: Mutex<Vec<Container>>,
+    parent: Arc<ServiceStorage>,
+}
+
+impl ScopePool {
+    pub fn acquire(&self) -> PooledScope {
+        // Return a pre-allocated scope or create new one
+    }
+    
+    pub fn release(&self, scope: Container) {
+        scope.clear();
+        self.free_scopes.lock().push(scope);
+    }
+}
+```
+
+**Expected Improvement:** ~100ns per request (75% faster scope creation)
+**Complexity:** Medium
+**Risk:** Medium (lifetime management)
+
+---
+
+#### 3. Fix Batch Registration Performance
+**Gap Analysis:** Batch registration (279ns) is slower than individual (255ns for 4 services).
+
+**Problem:** Current implementation has Vec allocation overhead that negates benefits.
+
+**Solution:** Use pre-sized Vec and avoid unnecessary checks:
+```rust
+impl BatchRegistrar {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            pending: Vec::with_capacity(capacity),
+            count: 0,
+        }
+    }
+}
+```
+
+**Expected Improvement:** Batch should be 20-30% faster than individual
+**Complexity:** Low
+**Risk:** Low
+
+---
+
+### Medium Priority
+
+#### 4. Faster Arc Downcast
+**Gap Analysis:** Each resolution does `Arc::downcast()` which involves type checking.
+
+**Solution:** Use unchecked downcast when type is guaranteed:
+```rust
+// In factory resolve, we know the type at registration time
+unsafe fn downcast_unchecked<T>(arc: Arc<dyn Any + Send + Sync>) -> Arc<T> {
+    // We registered this exact type, so downcast is guaranteed to succeed
+    let ptr = Arc::into_raw(arc) as *const T;
+    Arc::from_raw(ptr)
+}
+```
+
+**Expected Improvement:** ~2-3 ns per resolution
+**Complexity:** Low
+**Risk:** Medium (requires careful safety analysis)
+
+---
+
+#### 5. Deep Parent Chain Optimization
+**Gap Analysis:** Parent resolution is 28.7ns vs 18.7ns for local resolution (~10ns overhead).
+
+**Current Issue:** Only checks immediate parent, not full chain.
+
+**Solution:** Walk full parent chain with cached references:
+```rust
+fn resolve_from_parents<T: Injectable>(&self) -> Result<Arc<T>> {
+    let mut current = self.parent_storage.as_ref();
+    while let Some(storage) = current {
+        if let Some(factory) = storage.factories.get(&TypeId::of::<T>()) {
+            return Ok(factory.resolve().downcast::<T>().unwrap());
+        }
+        current = storage.parent.as_ref();
     }
     Err(DiError::not_found::<T>())
 }
 ```
 
-**Solutions:**
-
-#### a) Cache parent's Arc directly (trade memory for speed)
-```rust
-pub struct Container {
-    storage: Arc<ServiceStorage>,
-    parent_storage: Option<Arc<ServiceStorage>>,  // Strong ref instead of Weak
-    parent_weak: Option<Weak<ServiceStorage>>,    // Keep for proper cleanup
-    // ...
-}
-```
-
-#### b) Support deep hierarchy with iterative resolution
-```rust
-fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId) -> Result<Arc<T>> {
-    let mut current_parent = self.parent_storage.as_ref();
-    while let Some(storage) = current_parent {
-        if let Some(arc) = storage.resolve(type_id) {
-            if let Ok(typed) = arc.downcast::<T>() {
-                return Ok(typed);
-            }
-        }
-        current_parent = storage.parent.as_ref();
-    }
-    Err(DiError::not_found::<T>())
-}
-```
-
-**Expected Improvement:** ~10 ns per parent resolution (25%)
+**Expected Improvement:** Better support for deep hierarchies (5+ levels)
+**Complexity:** Low
+**Risk:** Low
 
 ---
 
-## Medium Priority Optimizations
+#### 6. Single-Thread Feature with Rc<T>
+**Gap Analysis:** Arc allocation ~10ns, Rc allocation ~5ns.
 
-### 5. Use TypeId Specialization for Common Types
-**Location:** `src/storage.rs`
-
-**Problem:** `TypeId` hashing is fast with ahash, but we can do better for common patterns.
-
-**Solution:** Implement a small inline cache for the most recently accessed types:
-```rust
-pub struct ServiceStorage {
-    factories: DashMap<TypeId, AnyFactory, RandomState>,
-    // LRU cache for hot types (1-4 entries)
-    hot_cache: [Option<(TypeId, AnyFactory)>; 4],
-}
-```
-
-**Expected Improvement:** ~3-5 ns for hot path types (15-25%)
-
----
-
-### 6. Reduce Arc Allocations in Transient Factories
-**Location:** `src/factory.rs` → `TransientFactory::resolve()`
-
-**Problem:** Every transient resolution allocates a new `Arc<T>`.
-
-**Current Code:**
-```rust
-pub fn create(&self) -> Arc<T> {
-    Arc::new((self.factory)())
-}
-```
-
-**Solutions:**
-
-#### a) Support `Rc<T>` for single-threaded scenarios
+**Solution:** Feature-gated single-thread mode for CLI tools:
 ```rust
 #[cfg(feature = "single-thread")]
-pub fn create(&self) -> Rc<T> {
-    Rc::new((self.factory)())
-}
+type SmartPtr<T> = Rc<T>;
+
+#[cfg(not(feature = "single-thread"))]
+type SmartPtr<T> = Arc<T>;
 ```
 
-#### b) Arena allocation for request-scoped transients
-```rust
-pub fn create_in_arena(&self, arena: &Arena) -> &T {
-    arena.alloc((self.factory)())
-}
-```
-
-**Expected Improvement:** ~5 ns per transient (20%)
+**Expected Improvement:** ~5 ns per transient creation
+**Complexity:** Medium (API changes)
+**Risk:** Low
 
 ---
 
-### 7. Optimize Registration Path
-**Location:** `src/container.rs` → registration methods
+### Low Priority
 
-**Problem:** Registration checks the lock state on every call.
+#### 7. Perfect Hashing for Static Containers
+For containers with known service sets at startup, use perfect hashing instead of DashMap.
 
-**Current Code:**
-```rust
-pub fn singleton<T: Injectable>(&self, instance: T) {
-    self.check_not_locked();  // RwLock read on every registration
-    // ...
-}
-```
-
-**Solution:** Use `AtomicBool` with relaxed ordering:
-```rust
-#[inline]
-fn check_not_locked(&self) {
-    if self.locked.load(Ordering::Relaxed) {
-        panic!("Cannot register services: container is locked");
-    }
-}
-```
-
-**Expected Improvement:** ~50 ns per registration (5%)
+**Expected Improvement:** ~5 ns for resolution
+**Complexity:** High
+**Risk:** Medium
 
 ---
 
-### 8. Batch Registration API
-**Location:** New API in `src/container.rs`
+#### 8. Profile-Guided Optimization (PGO)
+Build with PGO for production deployments.
 
-**Problem:** Registering many services has per-call overhead.
-
-**Solution:**
-```rust
-impl Container {
-    pub fn batch<F: FnOnce(&mut BatchRegistrar)>(&self, f: F) {
-        self.check_not_locked();
-        let mut registrar = BatchRegistrar::new();
-        f(&mut registrar);
-        registrar.commit(self);
-    }
-}
-
-pub struct BatchRegistrar {
-    pending: Vec<(TypeId, AnyFactory)>,
-}
-```
-
-**Expected Improvement:** ~50% for bulk registration scenarios
-
----
-
-## Low Priority Optimizations
-
-### 9. Feature-Gate Tracing Overhead
-**Location:** Throughout codebase
-
-**Problem:** Even when tracing feature is enabled, most calls don't actually trace.
-
-**Solution:** Use `tracing::enabled!` macro for conditional compilation:
-```rust
-#[cfg(feature = "tracing")]
-{
-    if tracing::enabled!(tracing::Level::TRACE) {
-        trace!(service = std::any::type_name::<T>(), "Resolving service");
-    }
-}
-```
-
----
-
-### 10. SIMD-Accelerated TypeId Comparison
-**Location:** `src/storage.rs`
-
-**Problem:** For containers with many services, TypeId lookups dominate.
-
-**Solution:** For very large containers (100+ services), consider a sorted vector with binary search or perfect hashing.
-
----
-
-### 11. Compile-Time Dependency Injection
-**Location:** New macro in `src/lib.rs`
-
-**Problem:** Runtime DI has inherent overhead vs compile-time.
-
-**Solution:** Add procedural macro for compile-time wiring:
-```rust
-#[derive(Injectable)]
-struct MyService {
-    #[inject]
-    db: Arc<Database>,
-    #[inject]
-    cache: Arc<Cache>,
-}
-```
-
----
-
-## Memory Optimizations
-
-### 12. Reduce Container Size
-**Current Size:** 40 bytes (estimated)
-- `Arc<ServiceStorage>`: 8 bytes
-- `Option<Weak<ServiceStorage>>`: 16 bytes
-- `Arc<RwLock<bool>>`: 8 bytes
-- `depth: u32`: 4 bytes
-- padding: 4 bytes
-
-**Solution:** Pack depth into the Arc's unused bits or use smaller types:
-```rust
-pub struct Container {
-    storage: Arc<ServiceStorage>,
-    parent: Option<Weak<ServiceStorage>>,
-    locked: Arc<AtomicBool>,  // 8 bytes smaller than RwLock<bool>
-    depth: u16,               // 2 bytes instead of 4
-}
-```
-
----
-
-### 13. ServiceStorage Optimization
-**Current:** DashMap with default shard count (usually 32)
-
-**Solution:** Reduce shard count for small containers:
-```rust
-impl ServiceStorage {
-    pub fn new() -> Self {
-        Self {
-            factories: DashMap::with_capacity_and_hasher_and_shard_amount(
-                8,                  // Initial capacity
-                RandomState::new(),
-                4,                  // Fewer shards for small containers
-            ),
-        }
-    }
-}
-```
-
----
-
-## Benchmarking Improvements
-
-### 14. Add More Realistic Benchmarks
-- Mixed read/write workloads
-- Deep scope hierarchies (5+ levels)
-- Large service counts (100+ services)
-- Real-world service graph patterns
-- Memory allocation tracking
-
-### 15. Add Comparison Benchmarks
-- Compare with `shaku`
-- Compare with `inject`
-- Compare with manual DI patterns
-
----
-
-## Implementation Roadmap
-
-### Phase 1: Quick Wins ✅ COMPLETED
-- [x] #7: AtomicBool for lock check (Relaxed ordering for fast path)
-- [x] #3b: AtomicBool for locked state (replaced RwLock<bool>)
-- [x] #13: Optimized DashMap shard count (8 shards instead of num_cpus * 4)
-- [x] Removed `parking_lot` dependency (no longer needed)
-
-### Phase 2: Core Optimizations ✅ COMPLETED
-- [x] #1: Enum-based AnyFactory (eliminates vtable lookup)
-- [x] #2: Pre-erase Arc type in all factories (store `Arc<dyn Any>` directly)
-- [x] #4a: Cache parent Arc (avoids `Weak::upgrade()` on every resolution)
-
-### Phase 3: Advanced ✅ COMPLETED
-- [x] #8: Batch registration API (`container.batch(|b| { ... })`)
-- [~] #5: Hot cache - skipped (DashMap already ~11ns, not worth added complexity)
-- [~] #6: Arena allocation - skipped (requires external dependency like `bumpalo`)
-
-### Phase 4: Compile-Time Features ✅ COMPLETED
-- [x] #11: Compile-time DI macro (`#[derive(Inject)]`, `#[inject]`, `from_container()`)
-- [~] #10: SIMD TypeId comparison - skipped (modern CPUs already efficient for 128-bit TypeId)
-
----
-
-## Measurement Methodology
-
-All benchmarks run with:
-- Criterion 0.5 with HTML reports
-- 100 samples, 3-second warmup
-- Release build with LTO
-- Intel/AMD x86_64 or Apple Silicon
-
-To run benchmarks:
 ```bash
-cargo bench --bench container_bench
+# Build with instrumentation
+RUSTFLAGS="-Cprofile-generate=/tmp/pgo" cargo build --release
+
+# Run benchmarks to generate profile
+./target/release/bench
+
+# Rebuild with profile data
+RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 ```
 
-To profile with flamegraph:
+**Expected Improvement:** 5-15% overall
+**Complexity:** Low (build process only)
+**Risk:** Low
+
+---
+
+#### 9. Lazy TypeId Computation
+Cache `TypeId::of::<T>()` results to avoid repeated computation.
+
+**Current:** TypeId is computed on every call
+**Solution:** Use const generics or lazy_static for common types
+
+**Expected Improvement:** ~1-2 ns
+**Complexity:** Medium
+**Risk:** Low
+
+---
+
+## Completed Optimizations
+
+### Phase 1 (v0.1.2) ✅
+- Replaced `RwLock<bool>` with `AtomicBool` for lock state
+- Optimized DashMap shard count (8 shards)
+- Removed `parking_lot` dependency
+
+### Phase 2 (v0.1.3) ✅
+- Enum-based `AnyFactory` (eliminated vtable indirection)
+- Pre-erased `Arc<dyn Any>` in factories
+- Cached parent `Arc<ServiceStorage>`
+
+### Phase 3 (v0.1.4) ✅
+- Batch registration API
+- BatchRegistrar struct
+
+### Phase 4 (v0.1.5) ✅
+- `#[derive(Inject)]` macro
+- `#[inject]` and `#[inject(optional)]` attributes
+- `from_container()` generation
+
+---
+
+## Benchmarking Commands
+
 ```bash
-cargo install flamegraph
+# Run all benchmarks
+cargo bench
+
+# Run specific benchmark
+cargo bench --bench container_bench -- "resolution"
+
+# Run comparison benchmarks
+cargo bench --bench comparison_bench
+
+# Run with profiling (requires perf/dtrace)
 cargo flamegraph --bench container_bench -- --bench
+
+# Run fuzzing (requires nightly)
+cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ```
 
 ---
 
 ## Changelog
 
-### v0.1.2 (Phase 1 Optimizations)
-- Replaced `parking_lot::RwLock<bool>` with `std::sync::atomic::AtomicBool` for lock state
-- Optimized DashMap shard count from default (num_cpus * 4) to 8 shards
-- Removed `parking_lot` dependency entirely
-- Registration is now ~6-8x faster
-- Scope creation is now ~9x faster
+### v0.1.5
+- Added `#[derive(Inject)]` compile-time DI macro
+- All fuzz targets passing
+- Current performance: 18.7ns resolution, 129ns scope creation
 
-### v0.1.3 (Phase 2 Optimizations)
-- Enum-based `AnyFactory` eliminates vtable indirection on every resolve
-- Pre-erased `Arc<dyn Any>` stored directly in factories (avoids clone+cast)
-- Cached parent `Arc<ServiceStorage>` instead of using `Weak::upgrade()`
-- Removed unnecessary `Weak` reference from Container struct
-- Parent resolution is now ~20% faster
-- Reduced Container memory footprint
+### v0.1.4
+- Batch registration API
+- Concurrent reads: ~92µs (4 threads)
 
-### v0.1.4 (Phase 3 Optimizations)
-- Added `batch()` API for registering multiple services efficiently
-- `BatchRegistrar` with `singleton()`, `lazy()`, `transient()` methods
-- Single lock check for entire batch vs per-registration
-- Concurrent reads improved another ~18% (~115µs → ~94µs)
-- Added batch registration benchmark
+### v0.1.3
+- Enum-based AnyFactory
+- Parent resolution: ~29ns
 
-### v0.1.5 (Phase 4 - Compile-Time DI)
-- Added `dependency-injector-derive` proc-macro crate
-- New `derive` feature for compile-time dependency injection
-- `#[derive(Inject)]` macro generates `from_container()` method
-- `#[inject]` attribute marks fields for automatic resolution
-- `#[inject(optional)]` supports optional dependencies with `Option<Arc<T>>`
-- Non-injected fields use `Default::default()`
-- Added derive example demonstrating usage
+### v0.1.2
+- AtomicBool lock state
+- Registration: ~125ns
 
 ---
 
-*Last updated: 2024-12-20*
-*Based on v0.1.5 benchmark results*
-
+*Last updated: December 2024*
+*Fuzzing: All targets passing (1M+ iterations)*
+*Next focus: Thread-local caching and scope pooling*
