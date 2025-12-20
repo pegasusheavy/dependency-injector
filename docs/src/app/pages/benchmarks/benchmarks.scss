@@ -142,6 +142,18 @@
   @apply text-slate-400 leading-relaxed;
 }
 
+.scaling-data {
+  @apply space-y-2;
+}
+
+.scaling-row {
+  @apply flex items-center gap-2;
+}
+
+.scaling-label {
+  @apply text-slate-400 text-sm min-w-[100px];
+}
+
 .methodology-section {
   @apply mt-16 pt-16 border-t border-slate-700/50;
 }

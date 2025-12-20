@@ -46,6 +46,10 @@ criterion = { version = "0.5", features = ["html_reports"] }  # Pin to 0.5 for R
 name = "container_bench"
 harness = false
 
+[[bench]]
+name = "comparison_bench"
+harness = false
+
 [dev-dependencies.cargo-husky]
 version = "1"
 default-features = false
