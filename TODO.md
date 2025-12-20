@@ -49,31 +49,6 @@ All fuzz targets pass with no crashes:
 
 ## Future Optimization Opportunities
 
-### High Priority
-
-#### 1. Fix Batch Registration Performance
-**Gap Analysis:** Batch registration (264ns) is slower than individual (249ns for 4 services).
-
-**Problem:** Current implementation has Vec allocation overhead that negates benefits.
-
-**Solution:** Use pre-sized Vec and avoid unnecessary checks:
-```rust
-impl BatchRegistrar {
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            pending: Vec::with_capacity(capacity),
-            count: 0,
-        }
-    }
-}
-```
-
-**Expected Improvement:** Batch should be 20-30% faster than individual
-**Complexity:** Low
-**Risk:** Low
-
----
-
 ### Medium Priority
 
 #### 2. Faster Arc Downcast
@@ -204,6 +179,12 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 - **30% faster** than regular scope creation (121ns → 84.5ns)
 - New methods: `ScopePool::new()`, `pool.acquire()`, `pool.available_count()`
 
+### Phase 7 (v0.1.8) ✅
+- **Fluent batch registration** - `container.register_batch().singleton(A).singleton(B).done()`
+- Eliminates closure overhead in batch registration
+- Fluent API is now **~1% faster** than individual registrations (243ns vs 246ns)
+- Closure-based `batch()` kept for ergonomics (333ns, still useful for grouping)
+
 ---
 
 ## Benchmarking Commands
@@ -228,6 +209,12 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ---
 
 ## Changelog
+
+### v0.1.8
+- Added fluent batch registration: `container.register_batch().singleton(A).done()`
+- `BatchBuilder` for chainable registrations without closure overhead
+- Fluent batch is **~1% faster** than individual registrations (243ns vs 246ns)
+- Closure-based `batch()` retained for ergonomics
 
 ### v0.1.7
 - Added `ScopePool` for pre-allocated scope reuse

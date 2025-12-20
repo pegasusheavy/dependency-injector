@@ -104,7 +104,7 @@ fn bench_registration(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("batch_4_services", |b| {
+    group.bench_function("batch_closure_4", |b| {
         b.iter(|| {
             let container = Container::new();
             container.batch(|batch| {
@@ -117,6 +117,24 @@ fn bench_registration(c: &mut Criterion) {
                 });
                 batch.singleton(ServiceD { flag: true });
             });
+            black_box(container)
+        })
+    });
+
+    group.bench_function("batch_fluent_4", |b| {
+        b.iter(|| {
+            let container = Container::new();
+            container
+                .register_batch()
+                .singleton(ServiceA { value: 1 })
+                .singleton(ServiceB {
+                    name: "test".into(),
+                })
+                .singleton(ServiceC {
+                    data: vec![1, 2, 3],
+                })
+                .singleton(ServiceD { flag: true })
+                .done();
             black_box(container)
         })
     });

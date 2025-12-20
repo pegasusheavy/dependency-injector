@@ -738,80 +738,175 @@ impl Container {
     /// assert!(container.contains::<Cache>());
     /// assert!(container.contains::<Logger>());
     /// ```
+    ///
+    /// Note: For maximum performance with many services, prefer the builder API:
+    /// ```rust
+    /// use dependency_injector::Container;
+    ///
+    /// #[derive(Clone)]
+    /// struct A;
+    /// #[derive(Clone)]
+    /// struct B;
+    ///
+    /// let container = Container::new();
+    /// container.register_batch()
+    ///     .singleton(A)
+    ///     .singleton(B)
+    ///     .done();
+    /// ```
     #[inline]
     pub fn batch<F>(&self, f: F)
     where
-        F: FnOnce(&mut BatchRegistrar),
+        F: FnOnce(BatchRegistrar<'_>),
     {
         self.check_not_locked();
 
-        let mut registrar = BatchRegistrar::new();
-        f(&mut registrar);
+        #[cfg(feature = "logging")]
+        let start_count = self.storage.len();
+
+        // Create a zero-cost batch registrar that wraps the storage
+        f(BatchRegistrar { storage: &self.storage });
 
         #[cfg(feature = "logging")]
-        let count = registrar.pending.len();
+        {
+            let end_count = self.storage.len();
+            debug!(
+                target: "dependency_injector",
+                depth = self.depth,
+                services_registered = end_count - start_count,
+                "Batch registration completed"
+            );
+        }
+    }
 
-        registrar.commit(&self.storage);
+    /// Start a fluent batch registration.
+    ///
+    /// This is faster than the closure-based `batch()` for many services
+    /// because it avoids closure overhead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use dependency_injector::Container;
+    ///
+    /// #[derive(Clone)]
+    /// struct Database { url: String }
+    /// #[derive(Clone)]
+    /// struct Cache { size: usize }
+    ///
+    /// let container = Container::new();
+    /// container.register_batch()
+    ///     .singleton(Database { url: "postgres://localhost".into() })
+    ///     .singleton(Cache { size: 1024 })
+    ///     .done();
+    ///
+    /// assert!(container.contains::<Database>());
+    /// assert!(container.contains::<Cache>());
+    /// ```
+    #[inline]
+    pub fn register_batch(&self) -> BatchBuilder<'_> {
+        self.check_not_locked();
+        BatchBuilder {
+            storage: &self.storage,
+            #[cfg(feature = "logging")]
+            count: 0,
+        }
+    }
+}
 
+/// Fluent batch registration builder.
+///
+/// Provides a chainable API for registering multiple services without closure overhead.
+pub struct BatchBuilder<'a> {
+    storage: &'a ServiceStorage,
+    #[cfg(feature = "logging")]
+    count: usize,
+}
+
+impl<'a> BatchBuilder<'a> {
+    /// Register a singleton and continue the chain
+    #[inline]
+    pub fn singleton<T: Injectable>(self, instance: T) -> Self {
+        self.storage.insert(TypeId::of::<T>(), AnyFactory::singleton(instance));
+        Self {
+            storage: self.storage,
+            #[cfg(feature = "logging")]
+            count: self.count + 1,
+        }
+    }
+
+    /// Register a lazy singleton and continue the chain
+    #[inline]
+    pub fn lazy<T: Injectable, F>(self, factory: F) -> Self
+    where
+        F: Fn() -> T + Send + Sync + 'static,
+    {
+        self.storage.insert(TypeId::of::<T>(), AnyFactory::lazy(factory));
+        Self {
+            storage: self.storage,
+            #[cfg(feature = "logging")]
+            count: self.count + 1,
+        }
+    }
+
+    /// Register a transient and continue the chain
+    #[inline]
+    pub fn transient<T: Injectable, F>(self, factory: F) -> Self
+    where
+        F: Fn() -> T + Send + Sync + 'static,
+    {
+        self.storage.insert(TypeId::of::<T>(), AnyFactory::transient(factory));
+        Self {
+            storage: self.storage,
+            #[cfg(feature = "logging")]
+            count: self.count + 1,
+        }
+    }
+
+    /// Finish the batch registration
+    #[inline]
+    pub fn done(self) {
         #[cfg(feature = "logging")]
         debug!(
             target: "dependency_injector",
-            depth = self.depth,
-            services_registered = count,
+            services_registered = self.count,
             "Batch registration completed"
         );
     }
 }
 
-/// Batch registrar for efficient bulk service registration.
+/// Batch registrar for closure-based bulk registration.
 ///
-/// Collects registrations and commits them all at once to minimize overhead.
-pub struct BatchRegistrar {
-    pending: Vec<(TypeId, AnyFactory)>,
+/// A zero-cost wrapper that provides direct storage access.
+/// The lock check is done once in `Container::batch()`.
+#[repr(transparent)]
+pub struct BatchRegistrar<'a> {
+    storage: &'a ServiceStorage,
 }
 
-impl BatchRegistrar {
-    /// Create a new batch registrar
+impl<'a> BatchRegistrar<'a> {
+    /// Register a singleton service (inserted immediately)
     #[inline]
-    fn new() -> Self {
-        Self {
-            pending: Vec::with_capacity(8), // Pre-allocate for typical batch sizes
-        }
+    pub fn singleton<T: Injectable>(&self, instance: T) {
+        self.storage.insert(TypeId::of::<T>(), AnyFactory::singleton(instance));
     }
 
-    /// Register a singleton service in the batch
+    /// Register a lazy singleton service (inserted immediately)
     #[inline]
-    pub fn singleton<T: Injectable>(&mut self, instance: T) {
-        let type_id = TypeId::of::<T>();
-        self.pending.push((type_id, AnyFactory::singleton(instance)));
-    }
-
-    /// Register a lazy singleton service in the batch
-    #[inline]
-    pub fn lazy<T: Injectable, F>(&mut self, factory: F)
+    pub fn lazy<T: Injectable, F>(&self, factory: F)
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
-        let type_id = TypeId::of::<T>();
-        self.pending.push((type_id, AnyFactory::lazy(factory)));
+        self.storage.insert(TypeId::of::<T>(), AnyFactory::lazy(factory));
     }
 
-    /// Register a transient service in the batch
+    /// Register a transient service (inserted immediately)
     #[inline]
-    pub fn transient<T: Injectable, F>(&mut self, factory: F)
+    pub fn transient<T: Injectable, F>(&self, factory: F)
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
-        let type_id = TypeId::of::<T>();
-        self.pending.push((type_id, AnyFactory::transient(factory)));
-    }
-
-    /// Commit all pending registrations to storage
-    #[inline]
-    fn commit(self, storage: &ServiceStorage) {
-        for (type_id, factory) in self.pending {
-            storage.insert(type_id, factory);
-        }
+        self.storage.insert(TypeId::of::<T>(), AnyFactory::transient(factory));
     }
 }
 
@@ -849,11 +944,11 @@ use std::sync::Mutex;
 /// {
 ///     let scope = pool.acquire();
 ///     scope.singleton(RequestId("req-123".into()));
-///     
+///
 ///     // Can access parent services
 ///     assert!(scope.contains::<AppConfig>());
 ///     assert!(scope.contains::<RequestId>());
-///     
+///
 ///     // Scope automatically released when dropped
 /// }
 ///
