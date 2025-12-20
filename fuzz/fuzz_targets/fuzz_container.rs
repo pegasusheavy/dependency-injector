@@ -61,12 +61,12 @@ enum ContainerOp {
 
 fuzz_target!(|ops: Vec<ContainerOp>| {
     let container = Container::new();
-    
+
     // Track what we've registered
     let mut has_small = false;
     let mut has_medium = false;
     let mut has_large = false;
-    
+
     for op in ops {
         match op {
             ContainerOp::RegisterSmall(svc) => {

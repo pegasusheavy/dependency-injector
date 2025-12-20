@@ -44,26 +44,26 @@ struct ConcurrentScenario {
 
 fuzz_target!(|scenario: ConcurrentScenario| {
     let container = Arc::new(Container::new());
-    
+
     // Register initial services
     for svc in scenario.initial_services.into_iter().take(10) {
         container.singleton(svc);
     }
-    
+
     // Also register a shared config
     container.singleton(SharedConfig { value: 42 });
-    
+
     // Clamp thread count
     let thread_count = (scenario.thread_count % 8).max(1) as usize;
     let ops = scenario.ops_per_thread;
-    
+
     // Spawn threads
     let mut handles = Vec::new();
-    
+
     for _ in 0..thread_count {
         let container = Arc::clone(&container);
         let ops = ops.clone();
-        
+
         let handle = thread::spawn(move || {
             for op in ops.into_iter().take(50) {
                 match op {
@@ -84,15 +84,15 @@ fuzz_target!(|scenario: ConcurrentScenario| {
                 }
             }
         });
-        
+
         handles.push(handle);
     }
-    
+
     // Wait for all threads
     for handle in handles {
         let _ = handle.join();
     }
-    
+
     // Container should still be functional
     let _ = container.try_get::<SharedConfig>();
     let _ = container.len();

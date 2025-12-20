@@ -1,6 +1,6 @@
 [package]
 name = "dependency-injector"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.85"
 description = "High-performance, lock-free dependency injection container for Rust"
@@ -33,9 +33,6 @@ ahash = "0.8"
 
 # Thread-safe lazy initialization
 once_cell = "1.19"
-
-# Faster parking lot mutex when needed
-parking_lot = "0.12"
 
 # Error handling
 thiserror = "2.0"

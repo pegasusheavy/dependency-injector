@@ -6,8 +6,8 @@
 use crate::factory::{AnyFactory, LazyFactory, SingletonFactory, TransientFactory};
 use crate::storage::ServiceStorage;
 use crate::{DiError, Injectable, Result};
-use parking_lot::RwLock;
 use std::any::{Any, TypeId};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 
 #[cfg(feature = "logging")]
@@ -38,8 +38,8 @@ pub struct Container {
     storage: Arc<ServiceStorage>,
     /// Parent container for scope hierarchy
     parent: Option<Weak<ServiceStorage>>,
-    /// Lock state (rarely accessed, ok to use RwLock)
-    locked: Arc<RwLock<bool>>,
+    /// Lock state - uses AtomicBool for fast lock checking (no contention)
+    locked: Arc<AtomicBool>,
     /// Scope depth for debugging
     depth: u32,
 }
@@ -65,7 +65,7 @@ impl Container {
         Self {
             storage: Arc::new(ServiceStorage::new()),
             parent: None,
-            locked: Arc::new(RwLock::new(false)),
+            locked: Arc::new(AtomicBool::new(false)),
             depth: 0,
         }
     }
@@ -78,7 +78,7 @@ impl Container {
         Self {
             storage: Arc::new(ServiceStorage::with_capacity(capacity)),
             parent: None,
-            locked: Arc::new(RwLock::new(false)),
+            locked: Arc::new(AtomicBool::new(false)),
             depth: 0,
         }
     }
@@ -126,7 +126,7 @@ impl Container {
         Self {
             storage: Arc::new(ServiceStorage::new()),
             parent: Some(Arc::downgrade(&self.storage)),
-            locked: Arc::new(RwLock::new(false)),
+            locked: Arc::new(AtomicBool::new(false)),
             depth: child_depth,
         }
     }
@@ -507,8 +507,7 @@ impl Container {
     /// Useful for ensuring no services are registered after app initialization.
     #[inline]
     pub fn lock(&self) {
-        let mut locked = self.locked.write();
-        *locked = true;
+        self.locked.store(true, Ordering::Release);
 
         #[cfg(feature = "logging")]
         debug!(
@@ -522,7 +521,7 @@ impl Container {
     /// Check if the container is locked.
     #[inline]
     pub fn is_locked(&self) -> bool {
-        *self.locked.read()
+        self.locked.load(Ordering::Acquire)
     }
 
     /// Clear all services from this scope.
@@ -543,9 +542,11 @@ impl Container {
     }
 
     /// Panic if locked (internal helper).
+    /// Uses relaxed ordering for fast path - we only need eventual consistency
+    /// since registration is not a hot path and locking is rare.
     #[inline]
     fn check_not_locked(&self) {
-        if *self.locked.read() {
+        if self.locked.load(Ordering::Relaxed) {
             panic!("Cannot register services: container is locked");
         }
     }
@@ -575,7 +576,7 @@ impl std::fmt::Debug for Container {
 // Container is Send + Sync because:
 // - ServiceStorage uses DashMap (thread-safe)
 // - parent is Weak<...> which is Send + Sync
-// - locked uses parking_lot::RwLock (Send + Sync)
+// - locked uses AtomicBool (Send + Sync)
 unsafe impl Send for Container {}
 unsafe impl Sync for Container {}
 

@@ -19,19 +19,42 @@ pub struct ServiceStorage {
 }
 
 impl ServiceStorage {
-    /// Create new empty storage
+    /// Create new empty storage with optimized shard count.
+    ///
+    /// Uses 8 shards as a balance between:
+    /// - Creation overhead (fewer shards = faster creation)
+    /// - Concurrent read performance (more shards = less contention)
+    ///
+    /// Default DashMap uses num_cpus * 4 shards which is overkill for
+    /// typical DI containers with <50 services.
     #[inline]
     pub fn new() -> Self {
         Self {
-            factories: DashMap::with_hasher(RandomState::new()),
+            factories: DashMap::with_capacity_and_hasher_and_shard_amount(
+                0,
+                RandomState::new(),
+                8, // 8 shards balances creation speed vs concurrency
+            ),
         }
     }
 
-    /// Create with pre-allocated capacity
+    /// Create with pre-allocated capacity and optimized shards.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
+        // Scale shards based on expected capacity and concurrency needs
+        let shard_amount = if capacity <= 16 {
+            8
+        } else if capacity <= 64 {
+            16
+        } else {
+            32
+        };
         Self {
-            factories: DashMap::with_capacity_and_hasher(capacity, RandomState::new()),
+            factories: DashMap::with_capacity_and_hasher_and_shard_amount(
+                capacity,
+                RandomState::new(),
+                shard_amount,
+            ),
         }
     }
 

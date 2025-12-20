@@ -33,12 +33,12 @@ enum ScopedOp {
     RegisterRootService(RootService),
     RegisterOverrideInRoot(OverrideService),
     GetFromRoot,
-    
+
     // Scope creation
     CreateScope,
     CreateScopedContainer,
     CreateNestedScope,
-    
+
     // Scoped operations
     RegisterInScope(ScopedService),
     RegisterOverrideInScope(OverrideService),
@@ -46,7 +46,7 @@ enum ScopedOp {
     GetOverrideFromScope,
     GetRootFromScope,
     ContainsInScope,
-    
+
     // Cleanup
     ClearScope,
     DropScope,
@@ -56,7 +56,7 @@ fuzz_target!(|ops: Vec<ScopedOp>| {
     let root = Container::new();
     let mut scopes: Vec<Container> = Vec::new();
     let mut scoped_containers: Vec<ScopedContainer> = Vec::new();
-    
+
     for op in ops.into_iter().take(100) { // Limit operations to prevent OOM
         match op {
             ScopedOp::RegisterRootService(svc) => {
@@ -127,7 +127,7 @@ fuzz_target!(|ops: Vec<ScopedOp>| {
             }
         }
     }
-    
+
     // Verify root is still functional after scope operations
     let _ = root.try_get::<RootService>();
     let _ = root.contains::<RootService>();

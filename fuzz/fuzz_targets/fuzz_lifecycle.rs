@@ -39,23 +39,23 @@ enum LifecycleOp {
     RegisterSingleton(SimpleService),
     RegisterLazy,
     RegisterTransient,
-    
+
     // Resolution
     GetSingleton,
     GetLazy,
     GetTransient,
     GetTransientMultiple(u8), // Get multiple transients
-    
+
     // Queries
     Contains,
     Len,
     IsEmpty,
-    
+
     // Lifecycle
     Lock,
     TryRegisterAfterLock(SimpleService),
     Clear,
-    
+
     // Scopes with lifecycle
     CreateScopeAndRegister,
     ResolveFromScope,
@@ -65,13 +65,13 @@ fuzz_target!(|ops: Vec<LifecycleOp>| {
     // Reset counters
     LAZY_COUNTER.store(0, Ordering::SeqCst);
     TRANSIENT_COUNTER.store(0, Ordering::SeqCst);
-    
+
     let container = Container::new();
     let mut is_locked = false;
     let mut has_lazy = false;
     let mut has_transient = false;
     let mut scope: Option<Container> = None;
-    
+
     for op in ops.into_iter().take(100) {
         match op {
             LifecycleOp::RegisterSingleton(svc) => {
@@ -108,7 +108,7 @@ fuzz_target!(|ops: Vec<LifecycleOp>| {
                 if has_lazy {
                     let result1 = container.try_get::<LazyService>();
                     let result2 = container.try_get::<LazyService>();
-                    
+
                     // Lazy singleton should return same instance
                     if let (Some(s1), Some(s2)) = (result1, result2) {
                         assert!(Arc::ptr_eq(&s1, &s2), "Lazy singleton should be same instance");
@@ -119,7 +119,7 @@ fuzz_target!(|ops: Vec<LifecycleOp>| {
                 if has_transient {
                     let result1 = container.try_get::<TransientService>();
                     let result2 = container.try_get::<TransientService>();
-                    
+
                     // Transient should return different instances
                     if let (Some(s1), Some(s2)) = (result1, result2) {
                         assert!(!Arc::ptr_eq(&s1, &s2), "Transient should be different instances");
@@ -131,13 +131,13 @@ fuzz_target!(|ops: Vec<LifecycleOp>| {
                 if has_transient {
                     let count = (count % 10).max(1);
                     let mut instances = Vec::new();
-                    
+
                     for _ in 0..count {
                         if let Some(svc) = container.try_get::<TransientService>() {
                             instances.push(svc);
                         }
                     }
-                    
+
                     // All instances should be unique
                     for i in 0..instances.len() {
                         for j in (i + 1)..instances.len() {
