@@ -47,3 +47,4 @@ Desktop.ini
 .env
 .env.local
 
+benchmark-results.txt
