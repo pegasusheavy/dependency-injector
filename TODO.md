@@ -1,27 +1,28 @@
 # Performance Optimization TODO
 
-> Analysis for dependency-injector v0.1.6 - December 2024
+> Analysis for dependency-injector v0.1.7 - December 2024
 
 ## Current Benchmark Results
 
-| Operation | v0.1.5 | v0.1.6 | Improvement | Target | Status |
+| Operation | v0.1.5 | v0.1.7 | Improvement | Target | Status |
 |-----------|--------|--------|-------------|--------|--------|
-| `get_singleton` | 18.7 ns | **15.3 ns** | **18% faster** | <12 ns | 🎯 |
-| `get_medium` | 18.8 ns | **15.3 ns** | **19% faster** | <12 ns | 🎯 |
-| `contains_check` | 10.8 ns | **10.9 ns** | - | <10 ns | ✅ |
-| `try_get_found` | 18.8 ns | **15.4 ns** | **18% faster** | <12 ns | 🎯 |
-| `try_get_not_found` | 10.9 ns | **17.6 ns** | -61% (cache miss) | N/A | ⚠️ |
-| `get_transient` | 25 ns | **43.5 ns** | -74% (cache miss) | N/A | ⚠️ |
-| `create_scope` | 129 ns | **134 ns** | - | <100 ns | 🔄 |
-| `resolve_from_parent` | 28.7 ns | **15.4 ns** | **46% faster** | <20 ns | ✅ |
-| `resolve_override` | 19 ns | **15.9 ns** | **16% faster** | <15 ns | ✅ |
-| `concurrent_reads_4` | 92 µs | **106 µs** | -15% | <80 µs | 🔄 |
+| `get_singleton` | 18.7 ns | **14.8 ns** | **21% faster** | <12 ns | 🎯 |
+| `get_medium` | 18.8 ns | **13.8 ns** | **27% faster** | <12 ns | 🎯 |
+| `contains_check` | 10.8 ns | **13.0 ns** | -20% (cache check) | <10 ns | ⚠️ |
+| `try_get_found` | 18.8 ns | **14.6 ns** | **22% faster** | <12 ns | 🎯 |
+| `try_get_not_found` | 10.9 ns | **16.7 ns** | -53% (cache miss) | N/A | ⚠️ |
+| `get_transient` | 25 ns | **39.5 ns** | -58% (cache miss) | N/A | ⚠️ |
+| `create_scope` | 129 ns | **121 ns** | **6% faster** | <100 ns | 🔄 |
+| `scope_pool_acquire` | N/A | **84.5 ns** | **30% faster** than create_scope | - | ✅ |
+| `resolve_from_parent` | 28.7 ns | **14.8 ns** | **48% faster** | <15 ns | ✅ |
+| `resolve_override` | 19 ns | **14.6 ns** | **23% faster** | <15 ns | ✅ |
 
 ### Trade-offs
 
 The thread-local hot cache provides significant speedups for **singleton and lazy services** (the common case) at the cost of:
-- Transient resolution is slower (~43ns vs ~25ns) due to cache miss overhead
+- Transient resolution is slower (~40ns vs ~25ns) due to cache miss overhead
 - `try_get_not_found` is slower (~17ns vs ~11ns) for the same reason
+- `contains_check` is slightly slower (~13ns vs ~11ns)
 
 This is an acceptable trade-off because:
 1. Singletons/lazy services are resolved far more often than transients
@@ -34,7 +35,7 @@ This is an acceptable trade-off because:
 | Manual DI (baseline) | **8 ns** | 88 ns | N/A |
 | HashMap + RwLock | 20.5 ns | **7.6 ns** | 93 µs |
 | DashMap (basic) | 20.7 ns | 670 ns | **89 µs** |
-| **dependency-injector** | **15.3 ns** | 87 ns | 106 µs |
+| **dependency-injector** | **14.8 ns** | 121 ns | 106 µs |
 
 ### Fuzzing Status ✅
 
@@ -50,36 +51,8 @@ All fuzz targets pass with no crashes:
 
 ### High Priority
 
-#### 1. Scope Pooling for Web Servers
-**Gap Analysis:** Scope creation is 134ns, but could be near-zero with pooling.
-
-**Solution:** Pre-allocate and reuse scope instances:
-```rust
-pub struct ScopePool {
-    free_scopes: Mutex<Vec<Container>>,
-    parent: Arc<ServiceStorage>,
-}
-
-impl ScopePool {
-    pub fn acquire(&self) -> PooledScope {
-        // Return a pre-allocated scope or create new one
-    }
-    
-    pub fn release(&self, scope: Container) {
-        scope.clear();
-        self.free_scopes.lock().push(scope);
-    }
-}
-```
-
-**Expected Improvement:** ~100ns per request (75% faster scope creation)
-**Complexity:** Medium
-**Risk:** Medium (lifetime management)
-
----
-
-#### 2. Fix Batch Registration Performance
-**Gap Analysis:** Batch registration (279ns) is slower than individual (255ns for 4 services).
+#### 1. Fix Batch Registration Performance
+**Gap Analysis:** Batch registration (264ns) is slower than individual (249ns for 4 services).
 
 **Problem:** Current implementation has Vec allocation overhead that negates benefits.
 
@@ -103,7 +76,7 @@ impl BatchRegistrar {
 
 ### Medium Priority
 
-#### 3. Faster Arc Downcast
+#### 2. Faster Arc Downcast
 **Gap Analysis:** Each resolution does `Arc::downcast()` which involves type checking.
 
 **Solution:** Use unchecked downcast when type is guaranteed:
@@ -122,8 +95,8 @@ unsafe fn downcast_unchecked<T>(arc: Arc<dyn Any + Send + Sync>) -> Arc<T> {
 
 ---
 
-#### 4. Deep Parent Chain Optimization
-**Gap Analysis:** Parent resolution is now 15.4ns but only checks immediate parent.
+#### 3. Deep Parent Chain Optimization
+**Gap Analysis:** Parent resolution is now 14.8ns but only checks immediate parent.
 
 **Current Issue:** Only checks immediate parent, not full chain.
 
@@ -147,7 +120,7 @@ fn resolve_from_parents<T: Injectable>(&self) -> Result<Arc<T>> {
 
 ---
 
-#### 5. Single-Thread Feature with Rc<T>
+#### 4. Single-Thread Feature with Rc<T>
 **Gap Analysis:** Arc allocation ~10ns, Rc allocation ~5ns.
 
 **Solution:** Feature-gated single-thread mode for CLI tools:
@@ -167,7 +140,7 @@ type SmartPtr<T> = Arc<T>;
 
 ### Low Priority
 
-#### 6. Perfect Hashing for Static Containers
+#### 5. Perfect Hashing for Static Containers
 For containers with known service sets at startup, use perfect hashing instead of DashMap.
 
 **Expected Improvement:** ~5 ns for resolution
@@ -176,7 +149,7 @@ For containers with known service sets at startup, use perfect hashing instead o
 
 ---
 
-#### 7. Profile-Guided Optimization (PGO)
+#### 6. Profile-Guided Optimization (PGO)
 Build with PGO for production deployments.
 
 ```bash
@@ -221,8 +194,15 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 - Thread-local hot cache for frequently accessed services
 - 4-slot direct-mapped cache with TypeId + storage pointer as key
 - `clear_cache()` and `warm_cache<T>()` methods
-- **18% faster** singleton resolution (18.7ns → 15.3ns)
-- **46% faster** parent resolution (28.7ns → 15.4ns)
+- **21% faster** singleton resolution (18.7ns → 14.8ns)
+- **48% faster** parent resolution (28.7ns → 14.8ns)
+
+### Phase 6 (v0.1.7) ✅
+- **ScopePool** for high-throughput web servers
+- Pre-allocates and reuses scope instances
+- **PooledScope** RAII guard for automatic release
+- **30% faster** than regular scope creation (121ns → 84.5ns)
+- New methods: `ScopePool::new()`, `pool.acquire()`, `pool.available_count()`
 
 ---
 
@@ -249,32 +229,33 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 
 ## Changelog
 
+### v0.1.7
+- Added `ScopePool` for pre-allocated scope reuse
+- Added `PooledScope` RAII guard for automatic release
+- **30% faster** scope acquisition vs regular creation
+- Ideal for high-throughput web servers (1000s of req/sec)
+
 ### v0.1.6
 - Added thread-local hot cache for frequently accessed services
-- **18% faster** singleton resolution (18.7ns → 15.3ns)
-- **46% faster** parent resolution (28.7ns → 15.4ns)
-- **16% faster** scope override resolution (19ns → 15.9ns)
+- **21% faster** singleton resolution (18.7ns → 14.8ns)
+- **48% faster** parent resolution (28.7ns → 14.8ns)
 - Trade-off: transient resolution slower due to cache miss overhead
 
 ### v0.1.5
 - Added `#[derive(Inject)]` compile-time DI macro
 - All fuzz targets passing
-- Current performance: 18.7ns resolution, 129ns scope creation
 
 ### v0.1.4
 - Batch registration API
-- Concurrent reads: ~92µs (4 threads)
 
 ### v0.1.3
 - Enum-based AnyFactory
-- Parent resolution: ~29ns
 
 ### v0.1.2
 - AtomicBool lock state
-- Registration: ~125ns
 
 ---
 
 *Last updated: December 2024*
 *Fuzzing: All targets passing (1M+ iterations)*
-*Next focus: Scope pooling and batch registration performance*
+*Next focus: Batch registration fix, faster Arc downcast*

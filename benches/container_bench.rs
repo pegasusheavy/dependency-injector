@@ -1,7 +1,7 @@
 //! Benchmarks for the DI container
 
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
-use dependency_injector::Container;
+use dependency_injector::{Container, ScopePool};
 use std::hint::black_box;
 use std::sync::Arc;
 
@@ -224,6 +224,35 @@ fn bench_scoped(c: &mut Criterion) {
         b.iter(|| {
             let service = child.get::<SmallService>().unwrap();
             black_box(service)
+        })
+    });
+
+    // Phase 6: Scope pool benchmarks
+    group.bench_function("scope_pool_acquire", |b| {
+        let root = Container::new();
+        root.singleton(SmallService { value: 42 });
+        let pool = ScopePool::new(&root, 4);
+
+        b.iter(|| {
+            let scope = pool.acquire();
+            black_box(scope)
+        })
+    });
+
+    group.bench_function("scope_pool_acquire_use_release", |b| {
+        let root = Container::new();
+        root.singleton(SmallService { value: 42 });
+        let pool = ScopePool::new(&root, 4);
+
+        b.iter(|| {
+            let scope = pool.acquire();
+            // Simulate typical request: register a service and resolve parent
+            scope.singleton(MediumService {
+                name: "request".into(),
+                values: vec![1],
+            });
+            let _ = scope.get::<SmallService>().unwrap();
+            black_box(scope)
         })
     });
 

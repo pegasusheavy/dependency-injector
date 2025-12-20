@@ -132,8 +132,8 @@ pub use std::sync::Arc;
 /// Prelude for convenient imports
 pub mod prelude {
     pub use crate::{
-        BatchRegistrar, Container, DiError, Factory, Injectable, Lifetime, Provider, Result, Scope,
-        ScopedContainer,
+        BatchRegistrar, Container, DiError, Factory, Injectable, Lifetime, PooledScope, Provider,
+        Result, Scope, ScopedContainer, ScopePool,
     };
     pub use std::sync::Arc;
 
