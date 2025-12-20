@@ -112,6 +112,10 @@ mod provider;
 mod scope;
 mod storage;
 
+// Re-export FrozenStorage when perfect-hash feature is enabled
+#[cfg(feature = "perfect-hash")]
+pub use storage::FrozenStorage;
+
 pub use container::*;
 pub use error::*;
 pub use factory::*;

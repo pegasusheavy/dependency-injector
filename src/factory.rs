@@ -229,6 +229,29 @@ pub(crate) enum AnyFactory {
     Transient(TransientFactory),
 }
 
+impl Clone for AnyFactory {
+    /// Clone the factory. For Lazy factories, this forces resolution first
+    /// to ensure the cloned factory shares the same instance.
+    fn clone(&self) -> Self {
+        match self {
+            AnyFactory::Singleton(f) => AnyFactory::Singleton(SingletonFactory {
+                instance: Arc::clone(&f.instance),
+            }),
+            AnyFactory::Lazy(f) => {
+                // Force resolution and convert to singleton for the clone
+                // This ensures the frozen storage has a pre-resolved value
+                let instance = f.resolve();
+                AnyFactory::Singleton(SingletonFactory { instance })
+            }
+            AnyFactory::Transient(f) => AnyFactory::Transient(TransientFactory {
+                factory: Arc::clone(&f.factory),
+                #[cfg(feature = "logging")]
+                type_name: f.type_name,
+            }),
+        }
+    }
+}
+
 impl AnyFactory {
     /// Create a singleton factory
     #[inline]

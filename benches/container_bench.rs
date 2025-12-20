@@ -307,6 +307,57 @@ fn bench_concurrent(c: &mut Criterion) {
     group.finish();
 }
 
+// Perfect hash benchmark (only when feature enabled)
+#[cfg(feature = "perfect-hash")]
+fn bench_perfect_hash(c: &mut Criterion) {
+    use std::any::TypeId;
+
+    let mut group = c.benchmark_group("perfect_hash");
+
+    // Setup: Create container with multiple services
+    let container = Container::new();
+    container.singleton(SmallService { value: 42 });
+    container.singleton(MediumService {
+        name: "test".into(),
+        values: vec![1, 2, 3],
+    });
+    container.singleton(ServiceA { value: 1 });
+    container.singleton(ServiceB { name: "b".into() });
+    container.singleton(ServiceC { data: vec![1, 2, 3] });
+    container.singleton(ServiceD { flag: true });
+
+    // Freeze the container to get perfect hash storage
+    let frozen = container.freeze();
+    let type_id = TypeId::of::<SmallService>();
+
+    group.bench_function("frozen_resolve", |b| {
+        b.iter(|| black_box(frozen.resolve(&type_id)))
+    });
+
+    group.bench_function("frozen_contains", |b| {
+        b.iter(|| black_box(frozen.contains(&type_id)))
+    });
+
+    // Compare with regular Container resolution (uses DashMap)
+    group.bench_function("container_get", |b| {
+        b.iter(|| black_box(container.get::<SmallService>()))
+    });
+
+    group.finish();
+}
+
+#[cfg(feature = "perfect-hash")]
+criterion_group!(
+    benches,
+    bench_registration,
+    bench_resolution,
+    bench_transient_resolution,
+    bench_scoped,
+    bench_concurrent,
+    bench_perfect_hash,
+);
+
+#[cfg(not(feature = "perfect-hash"))]
 criterion_group!(
     benches,
     bench_registration,

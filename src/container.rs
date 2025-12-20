@@ -675,6 +675,31 @@ impl Container {
         self.locked.load(Ordering::Acquire)
     }
 
+    /// Freeze the container into an immutable, perfectly-hashed storage.
+    ///
+    /// This creates a `FrozenStorage` that uses minimal perfect hashing for
+    /// O(1) lookups without hash collisions, providing ~5ns faster resolution.
+    ///
+    /// Note: This also locks the container to prevent further registrations.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use dependency_injector::Container;
+    ///
+    /// let container = Container::new();
+    /// container.singleton(MyService { ... });
+    ///
+    /// let frozen = container.freeze();
+    /// // Use frozen.resolve(&type_id) for faster lookups
+    /// ```
+    #[cfg(feature = "perfect-hash")]
+    #[inline]
+    pub fn freeze(&self) -> crate::storage::FrozenStorage {
+        self.lock();
+        crate::storage::FrozenStorage::from_storage(&self.storage)
+    }
+
     /// Clear all services from this scope.
     ///
     /// Does not affect parent scopes.

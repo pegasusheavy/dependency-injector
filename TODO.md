@@ -66,12 +66,18 @@ transient factories sparingly or pre-warming services at startup.
 
 ### Low Priority
 
-#### 5. Perfect Hashing for Static Containers
-For containers with known service sets at startup, use perfect hashing instead of DashMap.
+#### 5. Perfect Hashing for Static Containers ✅ IMPLEMENTED
+Implemented `FrozenStorage` with minimal perfect hashing using `boomphf` crate.
 
-**Expected Improvement:** ~5 ns for resolution
-**Complexity:** High
-**Risk:** Medium
+**Results:**
+- `frozen_contains`: **3.9ns** (vs ~10ns for DashMap) - **60% faster**
+- `frozen_resolve`: **14.5ns** (vs 13.8ns for Container) - slight overhead
+
+**Conclusion:** Perfect hashing helps `contains()` significantly but `resolve()` has overhead
+from TypeId verification. The hot cache in Container already provides better performance
+for repeated lookups.
+
+**API:** `container.freeze()` returns `FrozenStorage` (requires `perfect-hash` feature)
 
 ---
 
@@ -153,6 +159,13 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 - Added `test_deep_parent_chain` test with 4-level hierarchy
 - Benchmarks maintained: `create_scope` 97ns, `resolve_from_parent` 13.6ns
 
+### Phase 10 (v0.1.11) ✅
+- **Perfect hashing** for frozen containers using `boomphf` crate
+- `container.freeze()` creates `FrozenStorage` with O(1) lookup via MPHF
+- `frozen_contains`: **3.9ns** (60% faster than DashMap ~10ns)
+- `frozen_resolve`: 14.5ns (similar to Container due to TypeId verification overhead)
+- Best use case: frequent `contains()` checks on locked containers
+
 ---
 
 ## Benchmarking Commands
@@ -177,6 +190,13 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ---
 
 ## Changelog
+
+### v0.1.11
+- Added `perfect-hash` feature for frozen containers with MPHF
+- `FrozenStorage` provides O(1) lookup via minimal perfect hashing
+- `container.freeze()` method creates frozen storage
+- `frozen_contains()` is 60% faster than DashMap (3.9ns vs ~10ns)
+- Implemented `Clone` for `AnyFactory` (converts lazy to singleton on clone)
 
 ### v0.1.10
 - Deep parent chain resolution for multi-level hierarchies

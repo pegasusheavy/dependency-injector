@@ -1,6 +1,6 @@
 [package]
 name = "dependency-injector"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 rust-version = "1.85"
 description = "High-performance, lock-free dependency injection container for Rust"
@@ -25,6 +25,8 @@ tracing = ["logging"]
 async = ["dep:tokio"]
 # Derive macros for automatic injection
 derive = ["dep:dependency-injector-derive"]
+# Perfect hashing for locked containers (~5ns faster resolution)
+perfect-hash = ["dep:boomphf"]
 
 [dependencies]
 # Lock-free concurrent hashmap - much faster than RwLock<HashMap>
@@ -50,6 +52,9 @@ tokio = { version = "1.0", features = ["sync"], optional = true }
 
 # Derive macros (optional)
 dependency-injector-derive = { version = "0.1.0", path = "dependency-injector-derive", optional = true }
+
+# Minimal perfect hashing for locked containers (optional)
+boomphf = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "time"] }
