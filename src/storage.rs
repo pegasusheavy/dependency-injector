@@ -95,13 +95,17 @@ impl ServiceStorage {
     }
 
     /// Create a child storage with a parent reference for deep hierarchy resolution.
+    ///
+    /// Uses only 4 shards since child scopes typically have very few services
+    /// (usually just request-specific data like RequestId). This reduces creation
+    /// overhead while still supporting concurrent access.
     #[inline]
     pub fn with_parent(parent: Arc<ServiceStorage>) -> Self {
         Self {
             factories: DashMap::with_capacity_and_hasher_and_shard_amount(
                 0,
                 RandomState::new(),
-                8,
+                4, // 4 shards for child scopes (typically <5 services)
             ),
             parent: Some(parent),
         }

@@ -172,15 +172,17 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 ### Phase 11 (v0.1.12) ✅
 - **Fast bit-mixing hash** in hot cache - replaced DefaultHasher with golden ratio multiplication
 - **Single DashMap lookup** for service + transient flag - avoids second lookup for caching decision
+- **Reduced shard count** for child scopes (8 → 4) - faster scope creation
 - Resolution benchmarks improved dramatically:
-  - `get_singleton`: **9.4ns** (was 14.7ns) - **36% faster**
-  - `get_medium`: **9.2ns** (was 14.9ns) - **38% faster**
-  - `try_get_found`: **9.2ns** (was 14.4ns) - **35% faster**
-  - `try_get_not_found`: **12.7ns** (was 21.4ns) - **40% faster**
-  - `get_transient`: **24.2ns** (was 43ns) - **44% faster**
-  - `resolve_from_parent`: **9.4ns** (was 14.4ns) - **35% faster**
-  - `resolve_override`: **9.4ns** (was 17ns) - **45% faster**
-  - `create_scope`: **101ns** (was 137ns) - **26% faster**
+  - `get_singleton`: **~9ns** (was 14.7ns) - **35-40% faster**
+  - `get_medium`: **~9ns** (was 14.9ns) - **35-40% faster**
+  - `try_get_found`: **~9ns** (was 14.4ns) - **35-40% faster**
+  - `try_get_not_found`: **~12ns** (was 21.4ns) - **40-45% faster**
+  - `get_transient`: **~24ns** (was 43ns) - **44% faster**
+  - `resolve_from_parent`: **~9ns** (was 14.4ns) - **35-40% faster**
+  - `resolve_override`: **~9ns** (was 17ns) - **45-50% faster**
+  - `create_scope`: **~80-112ns** (was 137ns) - **18-42% faster**
+  - `scope_pool_acquire`: **~56ns** (was 87ns) - **35% faster**
 
 ---
 
@@ -210,10 +212,12 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ### v0.1.12
 - **Fast bit-mixing hash** in hot cache (golden ratio multiplication)
 - **Single DashMap lookup** via `get_with_transient_flag()` for service + caching decision
-- `get_singleton`: 14.7ns → **9.4ns** (36% faster)
-- `get_transient`: 43ns → **24.2ns** (44% faster)
-- `try_get_not_found`: 21.4ns → **12.7ns** (40% faster)
-- `create_scope`: 137ns → **101ns** (26% faster)
+- **Reduced shard count** for child scopes (8 → 4 shards)
+- `get_singleton`: 14.7ns → **~9ns** (35-40% faster)
+- `get_transient`: 43ns → **~24ns** (44% faster)
+- `try_get_not_found`: 21.4ns → **~12ns** (40-45% faster)
+- `create_scope`: 137ns → **~80-110ns** (20-40% faster)
+- `scope_pool_acquire`: 87ns → **~56ns** (35% faster)
 - All resolution benchmarks now under 10ns for cached services!
 
 ### v0.1.11
