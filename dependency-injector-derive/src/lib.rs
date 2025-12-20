@@ -71,11 +71,11 @@ use syn::{parse_macro_input, DeriveInput, Data, Fields, Type, Attribute};
 #[proc_macro_derive(Inject, attributes(inject))]
 pub fn derive_inject(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    
+
     let name = &input.ident;
     let generics = &input.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    
+
     // Only support structs with named fields
     let fields = match &input.data {
         Data::Struct(data) => match &data.fields {
@@ -98,16 +98,16 @@ pub fn derive_inject(input: TokenStream) -> TokenStream {
             .into();
         }
     };
-    
+
     // Parse fields and generate initialization code
     let mut field_inits = Vec::new();
-    
+
     for field in fields.iter() {
         let field_name = field.ident.as_ref().unwrap();
         let field_type = &field.ty;
-        
+
         let inject_attr = find_inject_attr(&field.attrs);
-        
+
         match inject_attr {
             Some(InjectAttr::Required) => {
                 // Extract inner type from Arc<T>
@@ -147,7 +147,7 @@ pub fn derive_inject(input: TokenStream) -> TokenStream {
             }
         }
     }
-    
+
     // Generate the implementation
     let expanded = quote! {
         impl #impl_generics #name #ty_generics #where_clause {
@@ -164,7 +164,7 @@ pub fn derive_inject(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(expanded)
 }
 
@@ -182,14 +182,14 @@ fn find_inject_attr(attrs: &[Attribute]) -> Option<InjectAttr> {
             if attr.meta.require_path_only().is_ok() {
                 return Some(InjectAttr::Required);
             }
-            
+
             // Parse inject(optional)
             if let Ok(nested) = attr.parse_args::<syn::Ident>() {
                 if nested == "optional" {
                     return Some(InjectAttr::Optional);
                 }
             }
-            
+
             // Default to required
             return Some(InjectAttr::Required);
         }
