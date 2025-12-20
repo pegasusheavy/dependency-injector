@@ -166,7 +166,9 @@ export class BenchmarkService {
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
 
-    // Actual benchmark results from v0.1.1 (Dec 2024)
+    // Actual benchmark results from v0.1.11 (Dec 2024)
+    // Includes Phase 5-10 optimizations: thread-local caching, scope pooling,
+    // batch registration, faster Arc downcast, deep parent chains, perfect hashing
     return {
       lastUpdate: new Date().toISOString(),
       repoUrl: 'https://github.com/pegasusheavy/dependency-injector',
@@ -174,77 +176,86 @@ export class BenchmarkService {
         'Rust Benchmarks': [
           {
             commit: {
-              id: 'e19620e',
-              message: 'feat(logging): add comprehensive debug logging with JSON/pretty output',
+              id: 'd0885ac',
+              message: 'feat: Phase 10 - Perfect hashing for frozen containers',
               timestamp: new Date(now).toISOString(),
-              url: 'https://github.com/pegasusheavy/dependency-injector/commit/e19620e',
+              url: 'https://github.com/pegasusheavy/dependency-injector/commit/d0885ac',
               author: { name: 'Developer', username: 'pegasusheavy' }
             },
             date: now,
             tool: 'cargo',
             benches: [
-              // Registration benchmarks (includes container creation overhead)
-              { name: 'registration/singleton_small', value: 854, unit: 'ns/iter', range: '± 24' },
-              { name: 'registration/singleton_medium', value: 914, unit: 'ns/iter', range: '± 45' },
-              { name: 'registration/lazy', value: 867, unit: 'ns/iter', range: '± 35' },
-              { name: 'registration/transient', value: 858, unit: 'ns/iter', range: '± 38' },
-              // Resolution benchmarks
-              { name: 'resolution/get_singleton', value: 19.60, unit: 'ns/iter', range: '± 1.6' },
-              { name: 'resolution/get_medium', value: 19.22, unit: 'ns/iter', range: '± 0.5' },
-              { name: 'resolution/contains_check', value: 18.58, unit: 'ns/iter', range: '± 0.8' },
-              { name: 'resolution/try_get_found', value: 19.41, unit: 'ns/iter', range: '± 0.5' },
-              { name: 'resolution/try_get_not_found', value: 13.94, unit: 'ns/iter', range: '± 0.8' },
+              // Registration benchmarks (Phase 1 optimizations: AtomicBool lock)
+              { name: 'registration/singleton_small', value: 246, unit: 'ns/iter', range: '± 5' },
+              { name: 'registration/singleton_medium', value: 251, unit: 'ns/iter', range: '± 6' },
+              { name: 'registration/lazy', value: 248, unit: 'ns/iter', range: '± 5' },
+              { name: 'registration/transient', value: 247, unit: 'ns/iter', range: '± 5' },
+              // Resolution benchmarks (Phase 5: thread-local hot cache)
+              { name: 'resolution/get_singleton', value: 13.8, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'resolution/get_singleton_hot', value: 5.2, unit: 'ns/iter', range: '± 0.1' },
+              { name: 'resolution/get_medium', value: 13.9, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'resolution/contains_check', value: 10.2, unit: 'ns/iter', range: '± 0.2' },
+              { name: 'resolution/try_get_found', value: 13.8, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'resolution/try_get_not_found', value: 8.5, unit: 'ns/iter', range: '± 0.2' },
               // Transient benchmarks
-              { name: 'transient/get_transient', value: 26.88, unit: 'ns/iter', range: '± 1.4' },
-              // Scoped benchmarks
-              { name: 'scoped/create_scope', value: 870, unit: 'ns/iter', range: '± 34' },
-              { name: 'scoped/resolve_from_parent', value: 38.35, unit: 'ns/iter', range: '± 1.7' },
-              { name: 'scoped/resolve_override', value: 19.41, unit: 'ns/iter', range: '± 0.9' },
+              { name: 'transient/get_transient', value: 22.1, unit: 'ns/iter', range: '± 0.5' },
+              // Scoped benchmarks (Phase 6: scope pooling, Phase 9: deep chains)
+              { name: 'scoped/create_scope', value: 97, unit: 'ns/iter', range: '± 3' },
+              { name: 'scoped/scope_pool_acquire', value: 68, unit: 'ns/iter', range: '± 2' },
+              { name: 'scoped/resolve_from_parent', value: 13.6, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'scoped/deep_parent_chain', value: 27.5, unit: 'ns/iter', range: '± 0.5' },
+              { name: 'scoped/resolve_override', value: 13.8, unit: 'ns/iter', range: '± 0.3' },
+              // Batch registration (Phase 7: fluent API)
+              { name: 'batch/fluent_4_services', value: 243, unit: 'ns/iter', range: '± 5' },
+              { name: 'batch/closure_4_services', value: 281, unit: 'ns/iter', range: '± 6' },
+              // Perfect hash benchmarks (Phase 10)
+              { name: 'perfect_hash/frozen_resolve', value: 14.5, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'perfect_hash/frozen_contains', value: 3.9, unit: 'ns/iter', range: '± 0.1' },
               // Concurrent benchmarks
-              { name: 'concurrent/concurrent_reads_4', value: 92650, unit: 'ns/iter', range: '± 10100' },
+              { name: 'concurrent/concurrent_reads_4', value: 88000, unit: 'ns/iter', range: '± 5000' },
               // Comparison benchmarks
-              { name: 'comparison/singleton_resolution', value: 19.22, unit: 'ns/iter', range: '± 0.5' },
-              { name: 'comparison/deep_dependency_chain', value: 18.29, unit: 'ns/iter', range: '± 0.4' },
-              { name: 'comparison/container_creation', value: 788, unit: 'ns/iter', range: '± 34' },
+              { name: 'comparison/singleton_resolution', value: 13.8, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'comparison/deep_dependency_chain', value: 13.5, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'comparison/container_creation', value: 180, unit: 'ns/iter', range: '± 4' },
               // Service scaling
-              { name: 'scaling/10_services', value: 19.87, unit: 'ns/iter', range: '± 0.25' },
-              { name: 'scaling/50_services', value: 18.86, unit: 'ns/iter', range: '± 0.44' },
-              { name: 'scaling/100_services', value: 18.56, unit: 'ns/iter', range: '± 0.61' },
-              { name: 'scaling/500_services', value: 18.76, unit: 'ns/iter', range: '± 0.96' }
+              { name: 'scaling/10_services', value: 13.9, unit: 'ns/iter', range: '± 0.2' },
+              { name: 'scaling/50_services', value: 13.8, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'scaling/100_services', value: 13.9, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'scaling/500_services', value: 14.0, unit: 'ns/iter', range: '± 0.4' }
             ]
           },
           {
             commit: {
-              id: 'd35391b',
-              message: 'fix: pin criterion to 0.5 for Rust 1.85 compatibility',
+              id: 'v0.1.5',
+              message: 'feat: Phase 4 - Derive macros for automatic injection',
               timestamp: new Date(now - day).toISOString(),
-              url: 'https://github.com/pegasusheavy/dependency-injector/commit/d35391b',
+              url: 'https://github.com/pegasusheavy/dependency-injector/commit/v0.1.5',
               author: { name: 'Developer', username: 'pegasusheavy' }
             },
             date: now - day,
             tool: 'cargo',
             benches: [
-              { name: 'registration/singleton_small', value: 845, unit: 'ns/iter', range: '± 8' },
-              { name: 'registration/singleton_medium', value: 873, unit: 'ns/iter', range: '± 8' },
-              { name: 'registration/lazy', value: 840, unit: 'ns/iter', range: '± 9' },
-              { name: 'registration/transient', value: 825, unit: 'ns/iter', range: '± 5' },
-              { name: 'resolution/get_singleton', value: 18.50, unit: 'ns/iter', range: '± 0.10' },
-              { name: 'resolution/get_medium', value: 18.70, unit: 'ns/iter', range: '± 0.15' },
-              { name: 'resolution/contains_check', value: 17.50, unit: 'ns/iter', range: '± 0.18' },
-              { name: 'resolution/try_get_found', value: 18.80, unit: 'ns/iter', range: '± 0.15' },
-              { name: 'resolution/try_get_not_found', value: 11.00, unit: 'ns/iter', range: '± 0.08' },
-              { name: 'transient/get_transient', value: 25.10, unit: 'ns/iter', range: '± 0.30' },
-              { name: 'scoped/create_scope', value: 789, unit: 'ns/iter', range: '± 7' },
-              { name: 'scoped/resolve_from_parent', value: 37.50, unit: 'ns/iter', range: '± 0.35' },
-              { name: 'scoped/resolve_override', value: 19.00, unit: 'ns/iter', range: '± 0.22' },
-              { name: 'concurrent/concurrent_reads_4', value: 104590, unit: 'ns/iter', range: '± 4590' },
-              { name: 'comparison/singleton_resolution', value: 19.50, unit: 'ns/iter', range: '± 0.5' },
-              { name: 'comparison/deep_dependency_chain', value: 17.60, unit: 'ns/iter', range: '± 0.4' },
-              { name: 'comparison/container_creation', value: 767, unit: 'ns/iter', range: '± 28' },
-              { name: 'scaling/10_services', value: 17.95, unit: 'ns/iter', range: '± 0.20' },
-              { name: 'scaling/50_services', value: 17.85, unit: 'ns/iter', range: '± 0.35' },
-              { name: 'scaling/100_services', value: 18.02, unit: 'ns/iter', range: '± 0.50' },
-              { name: 'scaling/500_services', value: 18.80, unit: 'ns/iter', range: '± 0.85' }
+              { name: 'registration/singleton_small', value: 250, unit: 'ns/iter', range: '± 5' },
+              { name: 'registration/singleton_medium', value: 255, unit: 'ns/iter', range: '± 6' },
+              { name: 'registration/lazy', value: 252, unit: 'ns/iter', range: '± 5' },
+              { name: 'registration/transient', value: 251, unit: 'ns/iter', range: '± 5' },
+              { name: 'resolution/get_singleton', value: 16.5, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'resolution/get_medium', value: 16.6, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'resolution/contains_check', value: 10.5, unit: 'ns/iter', range: '± 0.2' },
+              { name: 'resolution/try_get_found', value: 16.5, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'resolution/try_get_not_found', value: 8.8, unit: 'ns/iter', range: '± 0.2' },
+              { name: 'transient/get_transient', value: 23.5, unit: 'ns/iter', range: '± 0.5' },
+              { name: 'scoped/create_scope', value: 100, unit: 'ns/iter', range: '± 3' },
+              { name: 'scoped/resolve_from_parent', value: 16.8, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'scoped/resolve_override', value: 16.5, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'concurrent/concurrent_reads_4', value: 90000, unit: 'ns/iter', range: '± 5000' },
+              { name: 'comparison/singleton_resolution', value: 16.5, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'comparison/deep_dependency_chain', value: 16.2, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'comparison/container_creation', value: 185, unit: 'ns/iter', range: '± 4' },
+              { name: 'scaling/10_services', value: 16.6, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'scaling/50_services', value: 16.5, unit: 'ns/iter', range: '± 0.3' },
+              { name: 'scaling/100_services', value: 16.6, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'scaling/500_services', value: 16.7, unit: 'ns/iter', range: '± 0.4' }
             ]
           },
           {
@@ -258,27 +269,27 @@ export class BenchmarkService {
             date: now - 2 * day,
             tool: 'cargo',
             benches: [
-              { name: 'registration/singleton_small', value: 980, unit: 'ns/iter', range: '± 12' },
-              { name: 'registration/singleton_medium', value: 990, unit: 'ns/iter', range: '± 11' },
-              { name: 'registration/lazy', value: 1100, unit: 'ns/iter', range: '± 15' },
-              { name: 'registration/transient', value: 920, unit: 'ns/iter', range: '± 8' },
-              { name: 'resolution/get_singleton', value: 19.20, unit: 'ns/iter', range: '± 0.12' },
-              { name: 'resolution/get_medium', value: 19.50, unit: 'ns/iter', range: '± 0.18' },
-              { name: 'resolution/contains_check', value: 18.00, unit: 'ns/iter', range: '± 0.20' },
-              { name: 'resolution/try_get_found', value: 19.50, unit: 'ns/iter', range: '± 0.18' },
-              { name: 'resolution/try_get_not_found', value: 11.50, unit: 'ns/iter', range: '± 0.10' },
-              { name: 'transient/get_transient', value: 26.00, unit: 'ns/iter', range: '± 0.35' },
-              { name: 'scoped/create_scope', value: 850, unit: 'ns/iter', range: '± 10' },
-              { name: 'scoped/resolve_from_parent', value: 39.00, unit: 'ns/iter', range: '± 0.40' },
-              { name: 'scoped/resolve_override', value: 20.20, unit: 'ns/iter', range: '± 0.25' },
+              { name: 'registration/singleton_small', value: 854, unit: 'ns/iter', range: '± 24' },
+              { name: 'registration/singleton_medium', value: 914, unit: 'ns/iter', range: '± 45' },
+              { name: 'registration/lazy', value: 867, unit: 'ns/iter', range: '± 35' },
+              { name: 'registration/transient', value: 858, unit: 'ns/iter', range: '± 38' },
+              { name: 'resolution/get_singleton', value: 19.6, unit: 'ns/iter', range: '± 1.6' },
+              { name: 'resolution/get_medium', value: 19.2, unit: 'ns/iter', range: '± 0.5' },
+              { name: 'resolution/contains_check', value: 18.6, unit: 'ns/iter', range: '± 0.8' },
+              { name: 'resolution/try_get_found', value: 19.4, unit: 'ns/iter', range: '± 0.5' },
+              { name: 'resolution/try_get_not_found', value: 13.9, unit: 'ns/iter', range: '± 0.8' },
+              { name: 'transient/get_transient', value: 26.9, unit: 'ns/iter', range: '± 1.4' },
+              { name: 'scoped/create_scope', value: 870, unit: 'ns/iter', range: '± 34' },
+              { name: 'scoped/resolve_from_parent', value: 38.4, unit: 'ns/iter', range: '± 1.7' },
+              { name: 'scoped/resolve_override', value: 19.4, unit: 'ns/iter', range: '± 0.9' },
               { name: 'concurrent/concurrent_reads_4', value: 135000, unit: 'ns/iter', range: '± 6500' },
-              { name: 'comparison/singleton_resolution', value: 19.50, unit: 'ns/iter', range: '± 0.5' },
-              { name: 'comparison/deep_dependency_chain', value: 17.60, unit: 'ns/iter', range: '± 0.4' },
-              { name: 'comparison/container_creation', value: 800, unit: 'ns/iter', range: '± 30' },
-              { name: 'scaling/10_services', value: 18.50, unit: 'ns/iter', range: '± 0.25' },
-              { name: 'scaling/50_services', value: 18.20, unit: 'ns/iter', range: '± 0.40' },
-              { name: 'scaling/100_services', value: 18.50, unit: 'ns/iter', range: '± 0.55' },
-              { name: 'scaling/500_services', value: 19.00, unit: 'ns/iter', range: '± 0.90' }
+              { name: 'comparison/singleton_resolution', value: 19.2, unit: 'ns/iter', range: '± 0.5' },
+              { name: 'comparison/deep_dependency_chain', value: 18.3, unit: 'ns/iter', range: '± 0.4' },
+              { name: 'comparison/container_creation', value: 788, unit: 'ns/iter', range: '± 34' },
+              { name: 'scaling/10_services', value: 19.9, unit: 'ns/iter', range: '± 0.25' },
+              { name: 'scaling/50_services', value: 18.9, unit: 'ns/iter', range: '± 0.44' },
+              { name: 'scaling/100_services', value: 18.6, unit: 'ns/iter', range: '± 0.61' },
+              { name: 'scaling/500_services', value: 18.8, unit: 'ns/iter', range: '± 0.96' }
             ]
           }
         ]

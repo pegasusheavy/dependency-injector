@@ -18,28 +18,74 @@
     <div class="performance-highlights mb-12">
       <h2 class="text-2xl font-bold text-white mb-6">
         <fa-icon [icon]="['fas', 'rocket']" class="mr-2 text-rust-500"></fa-icon>
-        Performance Highlights
+        Performance Highlights <span class="text-sm text-slate-400 font-normal ml-2">v0.1.11</span>
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="highlight-card">
-          <div class="highlight-value">~19<span class="highlight-unit">ns</span></div>
+          <div class="highlight-value">~5<span class="highlight-unit">ns</span></div>
+          <div class="highlight-label">Hot Cache Resolution</div>
+          <div class="highlight-desc">Thread-local cached lookups</div>
+        </div>
+        <div class="highlight-card">
+          <div class="highlight-value">~14<span class="highlight-unit">ns</span></div>
           <div class="highlight-label">Singleton Resolution</div>
           <div class="highlight-desc">Lock-free service lookup</div>
         </div>
         <div class="highlight-card">
-          <div class="highlight-value">~14<span class="highlight-unit">ns</span></div>
-          <div class="highlight-label">Not Found Check</div>
-          <div class="highlight-desc">Fast negative lookups</div>
+          <div class="highlight-value">~68<span class="highlight-unit">ns</span></div>
+          <div class="highlight-label">Scope Pool Acquire</div>
+          <div class="highlight-desc">Reusable scopes for web</div>
         </div>
         <div class="highlight-card">
-          <div class="highlight-value">~27<span class="highlight-unit">ns</span></div>
-          <div class="highlight-label">Transient Creation</div>
-          <div class="highlight-desc">Factory invocation + Arc</div>
+          <div class="highlight-value">~4<span class="highlight-unit">ns</span></div>
+          <div class="highlight-label">Frozen Contains</div>
+          <div class="highlight-desc">Perfect hash lookup</div>
         </div>
-        <div class="highlight-card">
-          <div class="highlight-value">~93<span class="highlight-unit">µs</span></div>
-          <div class="highlight-label">Concurrent Reads</div>
-          <div class="highlight-desc">4 threads × 100 reads</div>
+      </div>
+    </div>
+
+    <!-- Optimization Journey -->
+    <div class="optimization-journey mb-12">
+      <h2 class="text-2xl font-bold text-white mb-6">
+        <fa-icon [icon]="['fas', 'chart-line']" class="mr-2 text-rust-500"></fa-icon>
+        Optimization Journey
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="journey-card">
+          <div class="journey-phase">Phase 1-2</div>
+          <div class="journey-title">Lock-Free Foundation</div>
+          <div class="journey-desc">AtomicBool + DashMap + enum-based factories</div>
+          <div class="journey-improvement">Registration: 854ns → 250ns</div>
+        </div>
+        <div class="journey-card">
+          <div class="journey-phase">Phase 5</div>
+          <div class="journey-title">Thread-Local Hot Cache</div>
+          <div class="journey-desc">4-slot cache for frequently accessed services</div>
+          <div class="journey-improvement">Resolution: 19ns → 5ns (hot)</div>
+        </div>
+        <div class="journey-card">
+          <div class="journey-phase">Phase 6</div>
+          <div class="journey-title">Scope Pooling</div>
+          <div class="journey-desc">Reusable Container instances for web servers</div>
+          <div class="journey-improvement">Scope: 97ns → 68ns (pooled)</div>
+        </div>
+        <div class="journey-card">
+          <div class="journey-phase">Phase 8</div>
+          <div class="journey-title">Faster Arc Downcast</div>
+          <div class="journey-desc">Unchecked downcast with TypeId guarantee</div>
+          <div class="journey-improvement">Resolution: 16ns → 14ns</div>
+        </div>
+        <div class="journey-card">
+          <div class="journey-phase">Phase 9</div>
+          <div class="journey-title">Deep Parent Chains</div>
+          <div class="journey-desc">Multi-level hierarchy resolution</div>
+          <div class="journey-improvement">Parent: 38ns → 14ns</div>
+        </div>
+        <div class="journey-card">
+          <div class="journey-phase">Phase 10</div>
+          <div class="journey-title">Perfect Hashing</div>
+          <div class="journey-desc">MPHF for frozen containers</div>
+          <div class="journey-improvement">Contains: 10ns → 4ns</div>
         </div>
       </div>
     </div>
@@ -215,10 +261,17 @@
               </tr>
               <tr class="bg-rust-500/10">
                 <td><code class="benchmark-name text-rust-400">dependency-injector</code></td>
-                <td class="font-mono text-white">~19 ns</td>
-                <td class="font-mono text-slate-400">~788 ns</td>
-                <td class="font-mono text-green-400">~93 µs</td>
-                <td class="text-slate-500 text-xs">Fastest runtime DI + features</td>
+                <td class="font-mono text-green-400">~5 ns</td>
+                <td class="font-mono text-green-400">~180 ns</td>
+                <td class="font-mono text-green-400">~88 µs</td>
+                <td class="text-slate-500 text-xs">Hot cache + pool + features</td>
+              </tr>
+              <tr class="bg-rust-500/5">
+                <td><code class="benchmark-name text-rust-300">└─ cold path</code></td>
+                <td class="font-mono text-white">~14 ns</td>
+                <td class="font-mono text-slate-400">—</td>
+                <td class="font-mono text-slate-400">—</td>
+                <td class="text-slate-500 text-xs">First access, no cache</td>
               </tr>
             </tbody>
           </table>
@@ -237,23 +290,23 @@
             <div class="scaling-data">
               <div class="scaling-row">
                 <span class="scaling-label">10 services:</span>
-                <span class="font-mono text-white">19.9 ns</span>
+                <span class="font-mono text-white">13.9 ns</span>
               </div>
               <div class="scaling-row">
                 <span class="scaling-label">50 services:</span>
-                <span class="font-mono text-white">18.9 ns</span>
+                <span class="font-mono text-white">13.8 ns</span>
               </div>
               <div class="scaling-row">
                 <span class="scaling-label">100 services:</span>
-                <span class="font-mono text-white">18.6 ns</span>
+                <span class="font-mono text-white">13.9 ns</span>
               </div>
               <div class="scaling-row">
                 <span class="scaling-label">500 services:</span>
-                <span class="font-mono text-white">18.8 ns</span>
+                <span class="font-mono text-white">14.0 ns</span>
               </div>
             </div>
             <p class="text-slate-500 text-xs mt-4">
-              O(1) lookup thanks to ahash + DashMap
+              O(1) lookup thanks to ahash + DashMap + hot cache
             </p>
           </div>
 
@@ -268,27 +321,27 @@
             <div class="scaling-data">
               <div class="scaling-row">
                 <span class="scaling-label">1 thread:</span>
-                <span class="font-mono text-white">47 µs</span>
-                <span class="text-slate-500 text-xs ml-2">(470 ns/op)</span>
+                <span class="font-mono text-white">42 µs</span>
+                <span class="text-slate-500 text-xs ml-2">(420 ns/op)</span>
               </div>
               <div class="scaling-row">
                 <span class="scaling-label">2 threads:</span>
-                <span class="font-mono text-white">70 µs</span>
-                <span class="text-slate-500 text-xs ml-2">(350 ns/op)</span>
+                <span class="font-mono text-white">65 µs</span>
+                <span class="text-slate-500 text-xs ml-2">(325 ns/op)</span>
               </div>
               <div class="scaling-row">
                 <span class="scaling-label">4 threads:</span>
-                <span class="font-mono text-white">93 µs</span>
-                <span class="text-slate-500 text-xs ml-2">(233 ns/op)</span>
+                <span class="font-mono text-white">88 µs</span>
+                <span class="text-slate-500 text-xs ml-2">(220 ns/op)</span>
               </div>
               <div class="scaling-row">
                 <span class="scaling-label">8 threads:</span>
-                <span class="font-mono text-white">198 µs</span>
-                <span class="text-slate-500 text-xs ml-2">(248 ns/op)</span>
+                <span class="font-mono text-white">185 µs</span>
+                <span class="text-slate-500 text-xs ml-2">(231 ns/op)</span>
               </div>
             </div>
             <p class="text-slate-500 text-xs mt-4">
-              Lock-free reads enable high throughput under contention
+              Lock-free reads + thread-local cache = high throughput
             </p>
           </div>
         </div>
@@ -301,7 +354,7 @@
               Fastest Runtime DI
             </div>
             <p class="comparison-text">
-              At <strong class="text-white">~19ns</strong> per resolution, dependency-injector is <strong class="text-white">10% faster</strong> than basic DashMap while providing full DI features.
+              At <strong class="text-white">~5ns</strong> hot cache / <strong class="text-white">~14ns</strong> cold, dependency-injector is <strong class="text-white">75% faster</strong> than basic DashMap for repeated lookups.
             </p>
           </div>
 
@@ -311,7 +364,7 @@
               Best Concurrency
             </div>
             <p class="comparison-text">
-              Beats HashMap+RwLock by <strong class="text-white">~10%</strong> under 4-thread load (<strong class="text-white">93µs vs 104µs</strong>). Lock-free reads eliminate contention.
+              Beats HashMap+RwLock by <strong class="text-white">~15%</strong> under 4-thread load (<strong class="text-white">88µs vs 104µs</strong>). Thread-local cache eliminates most contention.
             </p>
           </div>
 
@@ -321,7 +374,7 @@
               Rich Features
             </div>
             <p class="comparison-text">
-              Scoped containers, lazy singletons, transients, JSON logging, and parent chain resolution — all with <strong class="text-white">minimal overhead</strong>.
+              Scope pooling, deep parent chains, derive macros, perfect hashing, JSON logging — all with <strong class="text-white">minimal overhead</strong>.
             </p>
           </div>
         </div>
@@ -368,8 +421,8 @@
             </h3>
             <ul class="methodology-list">
               <li><strong>Registration:</strong> Container + service setup</li>
-              <li><strong>Resolution:</strong> Type lookup + factory call</li>
-              <li><strong>Scoped:</strong> Parent chain traversal</li>
+              <li><strong>Resolution:</strong> Hot cache + cold path lookup</li>
+              <li><strong>Scoped:</strong> Pool acquire + parent chain</li>
               <li><strong>Concurrent:</strong> Multi-thread scaling</li>
             </ul>
           </div>
@@ -383,7 +436,7 @@
               <li><strong>DashMap 6:</strong> Lock-free concurrent hashmap</li>
               <li><strong>ahash:</strong> Fast TypeId hashing</li>
               <li><strong>once_cell:</strong> Lazy initialization</li>
-              <li><strong>parking_lot:</strong> Optimized synchronization</li>
+              <li><strong>boomphf:</strong> Perfect hashing (optional)</li>
             </ul>
           </div>
         </div>

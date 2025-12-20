@@ -200,3 +200,40 @@
   }
 }
 
+// Optimization Journey section
+.optimization-journey {
+  @apply mb-12;
+}
+
+.journey-card {
+  @apply p-5 rounded-xl transition-all;
+  background: linear-gradient(145deg, var(--color-navy-900), var(--color-navy-850, #1a2940));
+  border: 1px solid rgb(51 65 85 / 0.5);
+
+  &:hover {
+    border-color: var(--color-rust-500);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(233, 114, 28, 0.08);
+  }
+}
+
+.journey-phase {
+  @apply text-xs font-bold uppercase tracking-wider mb-2;
+  color: var(--color-rust-500);
+}
+
+.journey-title {
+  @apply text-lg font-semibold text-white mb-1;
+}
+
+.journey-desc {
+  @apply text-sm text-slate-400 mb-3;
+}
+
+.journey-improvement {
+  @apply text-xs font-mono px-2 py-1 rounded inline-block;
+  background-color: rgba(34, 197, 94, 0.1);
+  color: rgb(134, 239, 172);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
