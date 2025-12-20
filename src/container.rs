@@ -4,7 +4,7 @@
 //! resolves dependencies with minimal overhead.
 
 use crate::factory::AnyFactory;
-use crate::storage::ServiceStorage;
+use crate::storage::{downcast_arc_unchecked, ServiceStorage};
 use crate::{DiError, Injectable, Result};
 use std::any::{Any, TypeId};
 use std::cell::RefCell;
@@ -54,8 +54,10 @@ impl HotCache {
 
         if let Some(entry) = &self.entries[slot] {
             if entry.type_id == type_id && entry.storage_ptr == storage_ptr {
-                // Cache hit - clone and downcast
-                return entry.service.clone().downcast::<T>().ok();
+                // Cache hit - clone and downcast (unchecked since TypeId matches)
+                // SAFETY: We verified TypeId matches, so the Arc contains type T
+                let arc = entry.service.clone();
+                return Some(unsafe { downcast_arc_unchecked(arc) });
             }
         }
         None
@@ -491,9 +493,11 @@ impl Container {
                 "Service not in local scope, checking parent"
             );
 
-            if let Some(arc) = storage.resolve(type_id)
-                && let Ok(typed) = arc.downcast::<T>()
-            {
+            if let Some(arc) = storage.resolve(type_id) {
+                // SAFETY: We resolved by TypeId::of::<T>(), so the factory
+                // was registered with the same TypeId and stores type T.
+                let typed: Arc<T> = unsafe { downcast_arc_unchecked(arc) };
+
                 #[cfg(feature = "logging")]
                 trace!(
                     target: "dependency_injector",

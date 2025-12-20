@@ -10,6 +10,33 @@ use dashmap::DashMap;
 use std::any::{Any, TypeId};
 use std::sync::Arc;
 
+// =============================================================================
+// Unchecked Downcast (Phase 8 optimization)
+// =============================================================================
+
+/// Downcast an `Arc<dyn Any + Send + Sync>` to `Arc<T>` without runtime type checking.
+///
+/// # Safety
+///
+/// This is safe when:
+/// - The `Arc` was originally created from a value of type `T`
+/// - The caller has verified the type through other means (e.g., TypeId lookup)
+///
+/// In this crate, this is guaranteed because:
+/// - Factories are keyed by `TypeId::of::<T>()` at registration
+/// - Resolution looks up by the same `TypeId::of::<T>()`
+/// - The factory stores the exact type that was registered
+#[inline]
+pub(crate) unsafe fn downcast_arc_unchecked<T: Send + Sync + 'static>(
+    arc: Arc<dyn Any + Send + Sync>,
+) -> Arc<T> {
+    // SAFETY: The caller guarantees that the Arc contains a value of type T.
+    // We convert Arc<dyn Any> -> raw pointer -> Arc<T>
+    let ptr = Arc::into_raw(arc);
+    // SAFETY: ptr came from Arc::into_raw and the caller guarantees T is correct
+    unsafe { Arc::from_raw(ptr as *const T) }
+}
+
 /// Thread-safe storage for service factories
 ///
 /// Uses `DashMap` with `ahash` for maximum concurrent performance.
@@ -77,10 +104,15 @@ impl ServiceStorage {
     }
 
     /// Try to resolve and downcast to T
+    ///
+    /// Uses unchecked downcast since we know the type from the TypeId lookup.
     #[inline]
     pub fn get<T: Send + Sync + 'static>(&self) -> Option<Arc<T>> {
-        self.resolve(&TypeId::of::<T>())
-            .and_then(|any| any.downcast::<T>().ok())
+        self.resolve(&TypeId::of::<T>()).map(|any| {
+            // SAFETY: We looked up by TypeId::of::<T>(), so the factory
+            // was registered with the same TypeId and stores type T.
+            unsafe { downcast_arc_unchecked(any) }
+        })
     }
 
     /// Get number of registered services

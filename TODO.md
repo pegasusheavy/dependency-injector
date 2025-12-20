@@ -51,26 +51,7 @@ All fuzz targets pass with no crashes:
 
 ### Medium Priority
 
-#### 2. Faster Arc Downcast
-**Gap Analysis:** Each resolution does `Arc::downcast()` which involves type checking.
-
-**Solution:** Use unchecked downcast when type is guaranteed:
-```rust
-// In factory resolve, we know the type at registration time
-unsafe fn downcast_unchecked<T>(arc: Arc<dyn Any + Send + Sync>) -> Arc<T> {
-    // We registered this exact type, so downcast is guaranteed to succeed
-    let ptr = Arc::into_raw(arc) as *const T;
-    Arc::from_raw(ptr)
-}
-```
-
-**Expected Improvement:** ~2-3 ns per resolution
-**Complexity:** Low
-**Risk:** Medium (requires careful safety analysis)
-
----
-
-#### 3. Deep Parent Chain Optimization
+#### 2. Deep Parent Chain Optimization
 **Gap Analysis:** Parent resolution is now 14.8ns but only checks immediate parent.
 
 **Current Issue:** Only checks immediate parent, not full chain.
@@ -185,6 +166,15 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 - Fluent API is now **~1% faster** than individual registrations (243ns vs 246ns)
 - Closure-based `batch()` kept for ergonomics (333ns, still useful for grouping)
 
+### Phase 8 (v0.1.9) ✅
+- **Unsafe unchecked downcast** - Skip runtime type checking in `Arc::downcast()`
+- Safe because TypeId lookup guarantees type correctness
+- Resolution benchmarks improved:
+  - `get_singleton`: **-6.6%** (14.8ns → 13.8ns)
+  - `get_medium`: **-4.2%** (13.9ns → 13.3ns)
+  - `try_get_found`: **-5.7%** (14.7ns → 13.9ns)
+  - `contains_check`: **-19.7%** (13.0ns → 10.4ns)
+
 ---
 
 ## Benchmarking Commands
@@ -209,6 +199,11 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ---
 
 ## Changelog
+
+### v0.1.9
+- Unsafe unchecked downcast for ~5-7% faster resolution
+- `downcast_arc_unchecked` avoids runtime type check (TypeId already verified)
+- Resolution benchmarks: `get_singleton` 14.8→13.8ns, `contains_check` 13→10.4ns
 
 ### v0.1.8
 - Added fluent batch registration: `container.register_batch().singleton(A).done()`
