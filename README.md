@@ -282,6 +282,33 @@ Run benchmarks locally:
 cargo bench
 ```
 
+## Fuzzing
+
+The project includes comprehensive fuzz testing using `cargo-fuzz`:
+
+```bash
+# Install cargo-fuzz (requires nightly)
+cargo install cargo-fuzz
+
+# List available fuzz targets
+cargo +nightly fuzz list
+
+# Run a specific fuzz target
+cargo +nightly fuzz run fuzz_container
+
+# Run for a specific duration
+cargo +nightly fuzz run fuzz_container -- -max_total_time=60
+```
+
+### Fuzz Targets
+
+| Target | Description |
+|--------|-------------|
+| `fuzz_container` | Basic registration and resolution operations |
+| `fuzz_scoped` | Hierarchical scopes and parent chain resolution |
+| `fuzz_concurrent` | Multi-threaded concurrent access patterns |
+| `fuzz_lifecycle` | Lazy initialization, transients, and locking |
+
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a PR.

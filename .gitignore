@@ -34,6 +34,11 @@ coverage/
 criterion/
 .criterion/
 
+# Fuzzing artifacts
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
+
 # OS generated
 Thumbs.db
 ehthumbs.db

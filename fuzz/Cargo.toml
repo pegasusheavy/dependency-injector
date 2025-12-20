@@ -1,0 +1,46 @@
+[package]
+name = "dependency-injector-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.dependency-injector]
+path = ".."
+features = []  # Disable logging for fuzzing performance
+
+# Fuzz targets
+
+[[bin]]
+name = "fuzz_container"
+path = "fuzz_targets/fuzz_container.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_scoped"
+path = "fuzz_targets/fuzz_scoped.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_concurrent"
+path = "fuzz_targets/fuzz_concurrent.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_lifecycle"
+path = "fuzz_targets/fuzz_lifecycle.rs"
+test = false
+doc = false
+bench = false
