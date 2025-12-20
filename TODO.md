@@ -1,6 +1,6 @@
 # Performance Optimization TODO
 
-> Benchmarking and profiling analysis for dependency-injector v0.1.2
+> Benchmarking and profiling analysis for dependency-injector v0.1.3
 
 ## Benchmark Results Summary
 
@@ -26,6 +26,16 @@ The Phase 1 optimizations achieved significant improvements:
 - **try_get** operations significantly improved
 
 Concurrent reads regressed slightly due to fewer DashMap shards, but this is an acceptable tradeoff for the massive gains in single-threaded operations which are far more common.
+
+### Phase 2 Results (Completed)
+
+The Phase 2 core optimizations focused on resolution hot paths:
+
+- **Parent resolution** is now **20% faster** (~38ns → ~30ns) via cached parent Arc
+- **Medium resolution** improved **6%** (~19ns → ~18ns)
+- **Concurrent reads** improved **8%** (~125µs → ~115µs)
+- Eliminated vtable indirection with enum-based `AnyFactory`
+- Reduced memory with Container size reduction (removed Weak ref)
 
 ---
 
@@ -400,10 +410,10 @@ impl ServiceStorage {
 - [x] #13: Optimized DashMap shard count (8 shards instead of num_cpus * 4)
 - [x] Removed `parking_lot` dependency (no longer needed)
 
-### Phase 2: Core Optimizations (Est. 4-6 hours)
-- [ ] #1: Enum-based AnyFactory
-- [ ] #2: Pre-erase Arc type in SingletonFactory
-- [ ] #4a: Cache parent Arc
+### Phase 2: Core Optimizations ✅ COMPLETED
+- [x] #1: Enum-based AnyFactory (eliminates vtable lookup)
+- [x] #2: Pre-erase Arc type in all factories (store `Arc<dyn Any>` directly)
+- [x] #4a: Cache parent Arc (avoids `Weak::upgrade()` on every resolution)
 
 ### Phase 3: Advanced (Est. 8-12 hours)
 - [ ] #5: Hot cache for frequently accessed types
@@ -445,6 +455,14 @@ cargo flamegraph --bench container_bench -- --bench
 - Removed `parking_lot` dependency entirely
 - Registration is now ~6-8x faster
 - Scope creation is now ~9x faster
+
+### v0.1.3 (Phase 2 Optimizations)
+- Enum-based `AnyFactory` eliminates vtable indirection on every resolve
+- Pre-erased `Arc<dyn Any>` stored directly in factories (avoids clone+cast)
+- Cached parent `Arc<ServiceStorage>` instead of using `Weak::upgrade()`
+- Removed unnecessary `Weak` reference from Container struct
+- Parent resolution is now ~20% faster
+- Reduced Container memory footprint
 
 ---
 

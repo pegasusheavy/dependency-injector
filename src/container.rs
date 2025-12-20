@@ -3,15 +3,15 @@
 //! The `Container` is the core of the DI system. It stores services and
 //! resolves dependencies with minimal overhead.
 
-use crate::factory::{AnyFactory, LazyFactory, SingletonFactory, TransientFactory};
+use crate::factory::AnyFactory;
 use crate::storage::ServiceStorage;
 use crate::{DiError, Injectable, Result};
 use std::any::{Any, TypeId};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 #[cfg(feature = "logging")]
-use tracing::{debug, trace, warn};
+use tracing::{debug, trace};
 
 /// High-performance dependency injection container.
 ///
@@ -36,8 +36,9 @@ use tracing::{debug, trace, warn};
 pub struct Container {
     /// Service storage (lock-free)
     storage: Arc<ServiceStorage>,
-    /// Parent container for scope hierarchy
-    parent: Option<Weak<ServiceStorage>>,
+    /// Parent storage - strong reference for fast resolution (Phase 2 optimization)
+    /// This avoids Weak::upgrade() cost on every parent resolution
+    parent_storage: Option<Arc<ServiceStorage>>,
     /// Lock state - uses AtomicBool for fast lock checking (no contention)
     locked: Arc<AtomicBool>,
     /// Scope depth for debugging
@@ -64,7 +65,7 @@ impl Container {
 
         Self {
             storage: Arc::new(ServiceStorage::new()),
-            parent: None,
+            parent_storage: None,
             locked: Arc::new(AtomicBool::new(false)),
             depth: 0,
         }
@@ -77,7 +78,7 @@ impl Container {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             storage: Arc::new(ServiceStorage::with_capacity(capacity)),
-            parent: None,
+            parent_storage: None,
             locked: Arc::new(AtomicBool::new(false)),
             depth: 0,
         }
@@ -125,7 +126,8 @@ impl Container {
 
         Self {
             storage: Arc::new(ServiceStorage::new()),
-            parent: Some(Arc::downgrade(&self.storage)),
+            // Phase 2: Cache parent Arc for fast resolution (avoids Weak::upgrade)
+            parent_storage: Some(Arc::clone(&self.storage)),
             locked: Arc::new(AtomicBool::new(false)),
             depth: child_depth,
         }
@@ -173,8 +175,8 @@ impl Container {
             "Registering singleton service"
         );
 
-        self.storage
-            .insert(type_id, AnyFactory::new(SingletonFactory::new(instance)));
+        // Phase 2: Use enum-based AnyFactory directly
+        self.storage.insert(type_id, AnyFactory::singleton(instance));
     }
 
     /// Register a lazy singleton service.
@@ -214,8 +216,8 @@ impl Container {
             "Registering lazy singleton service (will be created on first access)"
         );
 
-        self.storage
-            .insert(type_id, AnyFactory::new(LazyFactory::new(factory)));
+        // Phase 2: Use enum-based AnyFactory directly
+        self.storage.insert(type_id, AnyFactory::lazy(factory));
     }
 
     /// Register a transient service.
@@ -260,8 +262,8 @@ impl Container {
             "Registering transient service (new instance on every resolve)"
         );
 
-        self.storage
-            .insert(type_id, AnyFactory::new(TransientFactory::new(factory)));
+        // Phase 2: Use enum-based AnyFactory directly
+        self.storage.insert(type_id, AnyFactory::transient(factory));
     }
 
     /// Register using a factory (alias for `lazy`).
@@ -291,17 +293,11 @@ impl Container {
     pub fn register_by_id(&self, type_id: TypeId, instance: Arc<dyn Any + Send + Sync>) {
         self.check_not_locked();
 
-        // Create a factory that returns the Arc directly
-        struct ArcFactory(Arc<dyn Any + Send + Sync>);
-
-        impl crate::factory::Factory for ArcFactory {
-            fn resolve(&self) -> Arc<dyn Any + Send + Sync> {
-                Arc::clone(&self.0)
-            }
-        }
-
-        self.storage
-            .insert(type_id, AnyFactory::new(ArcFactory(instance)));
+        // Phase 2: Use the singleton factory with pre-erased Arc directly
+        self.storage.insert(
+            type_id,
+            AnyFactory::Singleton(crate::factory::SingletonFactory { instance }),
+        );
     }
 
     // =========================================================================
@@ -357,10 +353,14 @@ impl Container {
     }
 
     /// Resolve from parent chain (internal)
+    /// 
+    /// Phase 2 optimization: Uses cached parent Arc instead of Weak::upgrade()
+    /// This avoids atomic reference count operations on every parent lookup.
     fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId) -> Result<Arc<T>> {
         let type_name = std::any::type_name::<T>();
 
-        if let Some(weak) = self.parent.as_ref() {
+        // Phase 2: Use cached parent_storage directly (no Weak::upgrade needed)
+        if let Some(storage) = self.parent_storage.as_ref() {
             #[cfg(feature = "logging")]
             trace!(
                 target: "dependency_injector",
@@ -369,32 +369,20 @@ impl Container {
                 "Service not in local scope, checking parent"
             );
 
-            if let Some(storage) = weak.upgrade() {
-                if let Some(arc) = storage.resolve(type_id)
-                    && let Ok(typed) = arc.downcast::<T>()
-                {
-                    #[cfg(feature = "logging")]
-                    trace!(
-                        target: "dependency_injector",
-                        service = type_name,
-                        depth = self.depth,
-                        location = "parent",
-                        "Service resolved from parent scope"
-                    );
-                    return Ok(typed);
-                }
-                // Single-level parent resolution for now
-                // TODO: Support deep hierarchies by storing parent ref in storage
-            } else {
+            if let Some(arc) = storage.resolve(type_id)
+                && let Ok(typed) = arc.downcast::<T>()
+            {
                 #[cfg(feature = "logging")]
-                warn!(
+                trace!(
                     target: "dependency_injector",
                     service = type_name,
                     depth = self.depth,
-                    "Parent container was dropped while resolving service"
+                    location = "parent",
+                    "Service resolved from parent scope"
                 );
-                return Err(DiError::ParentDropped);
+                return Ok(typed);
             }
+            // TODO: Support deep hierarchies by walking parent chain in storage
         }
 
         #[cfg(feature = "logging")]
@@ -458,15 +446,15 @@ impl Container {
     }
 
     /// Check by TypeId
+    /// Phase 2 optimization: Uses cached parent Arc
     fn contains_type_id(&self, type_id: &TypeId) -> bool {
         // Check local
         if self.storage.contains(type_id) {
             return true;
         }
 
-        // Check parent chain
-        if let Some(weak) = self.parent.as_ref()
-            && let Some(storage) = weak.upgrade()
+        // Check parent chain (using cached Arc - no Weak::upgrade)
+        if let Some(storage) = self.parent_storage.as_ref()
             && storage.contains(type_id)
         {
             return true;
@@ -563,7 +551,7 @@ impl std::fmt::Debug for Container {
         f.debug_struct("Container")
             .field("service_count", &self.len())
             .field("depth", &self.depth)
-            .field("has_parent", &self.parent.is_some())
+            .field("has_parent", &self.parent_storage.is_some())
             .field("locked", &self.is_locked())
             .finish()
     }
