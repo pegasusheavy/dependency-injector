@@ -1,9 +1,9 @@
 //! Factory types for creating service instances
 //!
 //! Factories encapsulate how services are created and their lifecycle.
-//! 
+//!
 //! ## Phase 2 Optimizations
-//! 
+//!
 //! This module uses an enum-based `AnyFactory` instead of trait objects to:
 //! - Eliminate vtable indirection on every resolve (~2-3ns savings)
 //! - Store type-erased `Arc<dyn Any>` directly to avoid clone+cast overhead
@@ -33,7 +33,7 @@ pub trait Factory: Send + Sync {
 // =============================================================================
 
 /// Singleton factory - stores a single pre-created instance
-/// 
+///
 /// Optimization: Stores type-erased `Arc<dyn Any>` directly to avoid
 /// clone+cast on every resolution.
 pub struct SingletonFactory {
@@ -80,7 +80,7 @@ impl Factory for SingletonFactory {
 type LazyInitFn = Arc<dyn Fn() -> Arc<dyn Any + Send + Sync> + Send + Sync>;
 
 /// Lazy singleton factory - creates instance on first access
-/// 
+///
 /// Optimization: Stores type-erased factory and instance to avoid
 /// generic monomorphization overhead in hot paths.
 pub struct LazyFactory {
@@ -153,7 +153,7 @@ impl Factory for LazyFactory {
 type TransientFn = Arc<dyn Fn() -> Arc<dyn Any + Send + Sync> + Send + Sync>;
 
 /// Transient factory - creates new instance every time
-/// 
+///
 /// Optimization: Stores type-erased factory to avoid generic overhead.
 pub struct TransientFactory {
     /// Type-erased factory function
@@ -208,14 +208,14 @@ impl Factory for TransientFactory {
 // =============================================================================
 
 /// Type-erased factory wrapper for storage
-/// 
+///
 /// ## Optimization: Enum vs Trait Object
-/// 
+///
 /// Using an enum instead of `Box<dyn Factory>` eliminates:
 /// - vtable pointer lookup on every resolve (~2-3ns)
 /// - indirect function call overhead
 /// - better branch prediction (enum discriminant vs vtable)
-/// 
+///
 /// The match on 3 variants is cheaper than a vtable lookup because:
 /// - Enum discriminant is a single byte comparison
 /// - All code paths are visible to the optimizer

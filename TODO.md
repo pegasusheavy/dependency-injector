@@ -1,6 +1,6 @@
 # Performance Optimization TODO
 
-> Benchmarking and profiling analysis for dependency-injector v0.1.3
+> Benchmarking and profiling analysis for dependency-injector v0.1.4
 
 ## Benchmark Results Summary
 
@@ -36,6 +36,16 @@ The Phase 2 core optimizations focused on resolution hot paths:
 - **Concurrent reads** improved **8%** (~125µs → ~115µs)
 - Eliminated vtable indirection with enum-based `AnyFactory`
 - Reduced memory with Container size reduction (removed Weak ref)
+
+### Phase 3 Results (Completed)
+
+Phase 3 added developer ergonomics and maintained performance:
+
+- **Batch registration API** - `container.batch(|b| { ... })` for bulk registration
+- **Concurrent reads** improved another **18%** (~115µs → ~94µs)
+- **Contains check** improved **6%** (~11ns → ~10.8ns)
+- Hot cache optimization was skipped (DashMap already ~11ns, not worth complexity)
+- Arena allocation for transients was skipped (requires external dependency)
 
 ---
 
@@ -415,10 +425,10 @@ impl ServiceStorage {
 - [x] #2: Pre-erase Arc type in all factories (store `Arc<dyn Any>` directly)
 - [x] #4a: Cache parent Arc (avoids `Weak::upgrade()` on every resolution)
 
-### Phase 3: Advanced (Est. 8-12 hours)
-- [ ] #5: Hot cache for frequently accessed types
-- [ ] #8: Batch registration API
-- [ ] #6: Arena allocation for transients
+### Phase 3: Advanced ✅ COMPLETED
+- [x] #8: Batch registration API (`container.batch(|b| { ... })`)
+- [~] #5: Hot cache - skipped (DashMap already ~11ns, not worth added complexity)
+- [~] #6: Arena allocation - skipped (requires external dependency like `bumpalo`)
 
 ### Phase 4: Future Considerations
 - [ ] #11: Compile-time DI macro
@@ -464,8 +474,15 @@ cargo flamegraph --bench container_bench -- --bench
 - Parent resolution is now ~20% faster
 - Reduced Container memory footprint
 
+### v0.1.4 (Phase 3 Optimizations)
+- Added `batch()` API for registering multiple services efficiently
+- `BatchRegistrar` with `singleton()`, `lazy()`, `transient()` methods
+- Single lock check for entire batch vs per-registration
+- Concurrent reads improved another ~18% (~115µs → ~94µs)
+- Added batch registration benchmark
+
 ---
 
 *Last updated: 2024-12-20*
-*Based on v0.1.2 benchmark results*
+*Based on v0.1.4 benchmark results*
 

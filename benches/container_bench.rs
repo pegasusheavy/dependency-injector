@@ -25,6 +25,31 @@ struct LargeService {
     config: std::collections::HashMap<String, String>,
 }
 
+// Additional service types for batch registration benchmark
+#[allow(dead_code)]
+#[derive(Clone)]
+struct ServiceA {
+    value: i32,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+struct ServiceB {
+    name: String,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+struct ServiceC {
+    data: Vec<u8>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+struct ServiceD {
+    flag: bool,
+}
+
 fn bench_registration(c: &mut Criterion) {
     let mut group = c.benchmark_group("registration");
 
@@ -59,6 +84,39 @@ fn bench_registration(c: &mut Criterion) {
         b.iter(|| {
             let container = Container::new();
             container.transient(|| SmallService { value: 42 });
+            black_box(container)
+        })
+    });
+
+    // Phase 3: Batch registration benchmarks
+    group.bench_function("individual_4_services", |b| {
+        b.iter(|| {
+            let container = Container::new();
+            container.singleton(ServiceA { value: 1 });
+            container.singleton(ServiceB {
+                name: "test".into(),
+            });
+            container.singleton(ServiceC {
+                data: vec![1, 2, 3],
+            });
+            container.singleton(ServiceD { flag: true });
+            black_box(container)
+        })
+    });
+
+    group.bench_function("batch_4_services", |b| {
+        b.iter(|| {
+            let container = Container::new();
+            container.batch(|batch| {
+                batch.singleton(ServiceA { value: 1 });
+                batch.singleton(ServiceB {
+                    name: "test".into(),
+                });
+                batch.singleton(ServiceC {
+                    data: vec![1, 2, 3],
+                });
+                batch.singleton(ServiceD { flag: true });
+            });
             black_box(container)
         })
     });

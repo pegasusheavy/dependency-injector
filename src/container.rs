@@ -353,7 +353,7 @@ impl Container {
     }
 
     /// Resolve from parent chain (internal)
-    /// 
+    ///
     /// Phase 2 optimization: Uses cached parent Arc instead of Weak::upgrade()
     /// This avoids atomic reference count operations on every parent lookup.
     fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId) -> Result<Arc<T>> {
@@ -538,6 +538,116 @@ impl Container {
             panic!("Cannot register services: container is locked");
         }
     }
+
+    // =========================================================================
+    // Batch Registration (Phase 3)
+    // =========================================================================
+
+    /// Register multiple services in a single batch operation.
+    ///
+    /// This is more efficient than individual registrations when registering
+    /// many services at once, as it:
+    /// - Performs a single lock check at the start
+    /// - Minimizes per-call overhead
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dependency_injector::Container;
+    ///
+    /// #[derive(Clone)]
+    /// struct Database { url: String }
+    /// #[derive(Clone)]
+    /// struct Cache { size: usize }
+    /// #[derive(Clone)]
+    /// struct Logger { level: String }
+    ///
+    /// let container = Container::new();
+    /// container.batch(|batch| {
+    ///     batch.singleton(Database { url: "postgres://localhost".into() });
+    ///     batch.singleton(Cache { size: 1024 });
+    ///     batch.singleton(Logger { level: "info".into() });
+    /// });
+    ///
+    /// assert!(container.contains::<Database>());
+    /// assert!(container.contains::<Cache>());
+    /// assert!(container.contains::<Logger>());
+    /// ```
+    #[inline]
+    pub fn batch<F>(&self, f: F)
+    where
+        F: FnOnce(&mut BatchRegistrar),
+    {
+        self.check_not_locked();
+
+        let mut registrar = BatchRegistrar::new();
+        f(&mut registrar);
+
+        #[cfg(feature = "logging")]
+        let count = registrar.pending.len();
+
+        registrar.commit(&self.storage);
+
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            depth = self.depth,
+            services_registered = count,
+            "Batch registration completed"
+        );
+    }
+}
+
+/// Batch registrar for efficient bulk service registration.
+///
+/// Collects registrations and commits them all at once to minimize overhead.
+pub struct BatchRegistrar {
+    pending: Vec<(TypeId, AnyFactory)>,
+}
+
+impl BatchRegistrar {
+    /// Create a new batch registrar
+    #[inline]
+    fn new() -> Self {
+        Self {
+            pending: Vec::with_capacity(8), // Pre-allocate for typical batch sizes
+        }
+    }
+
+    /// Register a singleton service in the batch
+    #[inline]
+    pub fn singleton<T: Injectable>(&mut self, instance: T) {
+        let type_id = TypeId::of::<T>();
+        self.pending.push((type_id, AnyFactory::singleton(instance)));
+    }
+
+    /// Register a lazy singleton service in the batch
+    #[inline]
+    pub fn lazy<T: Injectable, F>(&mut self, factory: F)
+    where
+        F: Fn() -> T + Send + Sync + 'static,
+    {
+        let type_id = TypeId::of::<T>();
+        self.pending.push((type_id, AnyFactory::lazy(factory)));
+    }
+
+    /// Register a transient service in the batch
+    #[inline]
+    pub fn transient<T: Injectable, F>(&mut self, factory: F)
+    where
+        F: Fn() -> T + Send + Sync + 'static,
+    {
+        let type_id = TypeId::of::<T>();
+        self.pending.push((type_id, AnyFactory::transient(factory)));
+    }
+
+    /// Commit all pending registrations to storage
+    #[inline]
+    fn commit(self, storage: &ServiceStorage) {
+        for (type_id, factory) in self.pending {
+            storage.insert(type_id, factory);
+        }
+    }
 }
 
 impl Default for Container {
@@ -700,5 +810,29 @@ mod tests {
         container.singleton(TestService {
             value: "fail".into(),
         });
+    }
+
+    #[test]
+    fn test_batch_registration() {
+        #[derive(Clone)]
+        struct ServiceA(i32);
+        #[derive(Clone)]
+        struct ServiceB(String);
+
+        let container = Container::new();
+        container.batch(|batch| {
+            batch.singleton(ServiceA(42));
+            batch.singleton(ServiceB("test".into()));
+            batch.lazy(|| TestService {
+                value: "lazy".into(),
+            });
+        });
+
+        assert!(container.contains::<ServiceA>());
+        assert!(container.contains::<ServiceB>());
+        assert!(container.contains::<TestService>());
+
+        let a = container.get::<ServiceA>().unwrap();
+        assert_eq!(a.0, 42);
     }
 }
