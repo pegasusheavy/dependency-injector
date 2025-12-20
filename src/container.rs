@@ -214,9 +214,9 @@ impl Container {
         );
 
         Self {
-            storage: Arc::new(ServiceStorage::new()),
-            // Phase 2: Cache parent Arc for fast resolution (avoids Weak::upgrade)
-            parent_storage: Some(Arc::clone(&self.storage)),
+            // Phase 9: Storage now holds parent reference for deep chain resolution
+            storage: Arc::new(ServiceStorage::with_parent(Arc::clone(&self.storage))),
+            parent_storage: Some(Arc::clone(&self.storage)), // Keep for quick parent access
             locked: Arc::new(AtomicBool::new(false)),
             depth: child_depth,
         }
@@ -478,21 +478,24 @@ impl Container {
 
     /// Resolve from parent chain (internal)
     ///
-    /// Phase 2 optimization: Uses cached parent Arc instead of Weak::upgrade()
-    /// This avoids atomic reference count operations on every parent lookup.
+    /// Phase 9 optimization: Walks the full parent chain via ServiceStorage.parent.
+    /// This allows services to be resolved from any ancestor scope.
     fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId, storage_ptr: usize) -> Result<Arc<T>> {
         let type_name = std::any::type_name::<T>();
 
-        // Phase 2: Use cached parent_storage directly (no Weak::upgrade needed)
-        if let Some(storage) = self.parent_storage.as_ref() {
-            #[cfg(feature = "logging")]
-            trace!(
-                target: "dependency_injector",
-                service = type_name,
-                depth = self.depth,
-                "Service not in local scope, checking parent"
-            );
+        #[cfg(feature = "logging")]
+        trace!(
+            target: "dependency_injector",
+            service = type_name,
+            depth = self.depth,
+            "Service not in local scope, walking parent chain"
+        );
 
+        // Walk the full parent chain via storage's parent references
+        let mut current = self.storage.parent();
+        let mut ancestor_depth = self.depth.saturating_sub(1);
+
+        while let Some(storage) = current {
             if let Some(arc) = storage.resolve(type_id) {
                 // SAFETY: We resolved by TypeId::of::<T>(), so the factory
                 // was registered with the same TypeId and stores type T.
@@ -503,8 +506,9 @@ impl Container {
                     target: "dependency_injector",
                     service = type_name,
                     depth = self.depth,
-                    location = "parent",
-                    "Service resolved from parent scope"
+                    ancestor_depth = ancestor_depth,
+                    location = "ancestor",
+                    "Service resolved from ancestor scope"
                 );
 
                 // Cache non-transient services from parent (using child's storage ptr as key)
@@ -514,7 +518,8 @@ impl Container {
 
                 return Ok(typed);
             }
-            // TODO: Support deep hierarchies by walking parent chain in storage
+            current = storage.parent();
+            ancestor_depth = ancestor_depth.saturating_sub(1);
         }
 
         #[cfg(feature = "logging")]
@@ -615,21 +620,10 @@ impl Container {
     }
 
     /// Check by TypeId
-    /// Phase 2 optimization: Uses cached parent Arc
+    /// Phase 9 optimization: Uses storage's parent chain for deep hierarchy support
     fn contains_type_id(&self, type_id: &TypeId) -> bool {
-        // Check local
-        if self.storage.contains(type_id) {
-            return true;
-        }
-
-        // Check parent chain (using cached Arc - no Weak::upgrade)
-        if let Some(storage) = self.parent_storage.as_ref()
-            && storage.contains(type_id)
-        {
-            return true;
-        }
-
-        false
+        // Check local storage and full parent chain
+        self.storage.contains_in_chain(type_id)
     }
 
     /// Get the number of services in this scope (not including parents).
@@ -978,8 +972,9 @@ pub struct ScopePool {
     parent_depth: u32,
 }
 
-/// A reusable scope slot containing pre-allocated storage and lock
+/// A reusable scope slot containing pre-allocated storage and lock state
 struct ScopeSlot {
+    /// Pre-allocated storage with parent reference
     storage: Arc<ServiceStorage>,
     locked: Arc<AtomicBool>,
 }
@@ -1004,10 +999,10 @@ impl ScopePool {
     pub fn new(parent: &Container, capacity: usize) -> Self {
         let mut available = Vec::with_capacity(capacity);
 
-        // Pre-allocate scopes
+        // Pre-allocate storage with parent reference and lock states
         for _ in 0..capacity {
             available.push(ScopeSlot {
-                storage: Arc::new(ServiceStorage::new()),
+                storage: Arc::new(ServiceStorage::with_parent(Arc::clone(&parent.storage))),
                 locked: Arc::new(AtomicBool::new(false)),
             });
         }
@@ -1057,7 +1052,7 @@ impl ScopePool {
                 #[cfg(feature = "logging")]
                 trace!(
                     target: "dependency_injector",
-                    "Acquired scope from pool"
+                    "Acquired scope from pool (reusing storage)"
                 );
                 (slot.storage, slot.locked)
             }
@@ -1067,9 +1062,8 @@ impl ScopePool {
                     target: "dependency_injector",
                     "Pool empty, creating new scope"
                 );
-                // Pool is empty, create new scope
                 (
-                    Arc::new(ServiceStorage::new()),
+                    Arc::new(ServiceStorage::with_parent(Arc::clone(&self.parent_storage))),
                     Arc::new(AtomicBool::new(false)),
                 )
             }
@@ -1091,7 +1085,7 @@ impl ScopePool {
     /// Return a scope to the pool (internal use).
     #[inline]
     fn release(&self, container: Container) {
-        // Clear the scope's storage for reuse
+        // Clear storage for reuse (parent reference is preserved)
         container.storage.clear();
         // Reset lock state
         container.locked.store(false, Ordering::Relaxed);
@@ -1413,5 +1407,49 @@ mod tests {
 
         // Both return to pool
         assert_eq!(pool.available_count(), 2);
+    }
+
+    #[test]
+    fn test_deep_parent_chain() {
+        // Test that services can be resolved from grandparent and beyond
+        #[derive(Clone)]
+        struct RootService(i32);
+        #[derive(Clone)]
+        struct MiddleService(i32);
+        #[derive(Clone)]
+        struct LeafService(i32);
+
+        // Create 4-level hierarchy: root -> middle1 -> middle2 -> leaf
+        let root = Container::new();
+        root.singleton(RootService(1));
+
+        let middle1 = root.scope();
+        middle1.singleton(MiddleService(2));
+
+        let middle2 = middle1.scope();
+        // No service in middle2
+
+        let leaf = middle2.scope();
+        leaf.singleton(LeafService(4));
+
+        // Leaf should be able to access all ancestor services
+        assert!(leaf.contains::<RootService>(), "Should find root service in leaf");
+        assert!(leaf.contains::<MiddleService>(), "Should find middle service in leaf");
+        assert!(leaf.contains::<LeafService>(), "Should find leaf service in leaf");
+
+        // Verify resolution works
+        let root_svc = leaf.get::<RootService>().unwrap();
+        assert_eq!(root_svc.0, 1);
+
+        let middle_svc = leaf.get::<MiddleService>().unwrap();
+        assert_eq!(middle_svc.0, 2);
+
+        let leaf_svc = leaf.get::<LeafService>().unwrap();
+        assert_eq!(leaf_svc.0, 4);
+
+        // Middle2 should also access ancestor services
+        assert!(middle2.contains::<RootService>());
+        assert!(middle2.contains::<MiddleService>());
+        assert!(!middle2.contains::<LeafService>()); // Leaf service not in parent
     }
 }

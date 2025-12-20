@@ -51,32 +51,7 @@ All fuzz targets pass with no crashes:
 
 ### Medium Priority
 
-#### 2. Deep Parent Chain Optimization
-**Gap Analysis:** Parent resolution is now 14.8ns but only checks immediate parent.
-
-**Current Issue:** Only checks immediate parent, not full chain.
-
-**Solution:** Walk full parent chain with cached references:
-```rust
-fn resolve_from_parents<T: Injectable>(&self) -> Result<Arc<T>> {
-    let mut current = self.parent_storage.as_ref();
-    while let Some(storage) = current {
-        if let Some(factory) = storage.factories.get(&TypeId::of::<T>()) {
-            return Ok(factory.resolve().downcast::<T>().unwrap());
-        }
-        current = storage.parent.as_ref();
-    }
-    Err(DiError::not_found::<T>())
-}
-```
-
-**Expected Improvement:** Better support for deep hierarchies (5+ levels)
-**Complexity:** Low
-**Risk:** Low
-
----
-
-#### 4. Single-Thread Feature with Rc<T>
+#### 2. Single-Thread Feature with Rc<T>
 **Gap Analysis:** Arc allocation ~10ns, Rc allocation ~5ns.
 
 **Solution:** Feature-gated single-thread mode for CLI tools:
@@ -175,6 +150,14 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
   - `try_get_found`: **-5.7%** (14.7ns → 13.9ns)
   - `contains_check`: **-19.7%** (13.0ns → 10.4ns)
 
+### Phase 9 (v0.1.10) ✅
+- **Deep parent chain resolution** - Services can now be resolved from grandparents and beyond
+- `ServiceStorage` now holds optional parent reference for chain walking
+- `resolve_from_parents` walks the full ancestor chain
+- `contains_in_chain` checks all ancestors
+- Added `test_deep_parent_chain` test with 4-level hierarchy
+- Benchmarks maintained: `create_scope` 97ns, `resolve_from_parent` 13.6ns
+
 ---
 
 ## Benchmarking Commands
@@ -199,6 +182,13 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ---
 
 ## Changelog
+
+### v0.1.10
+- Deep parent chain resolution for multi-level hierarchies
+- `ServiceStorage` now holds parent reference for chain walking
+- `resolve_from_parents` walks full ancestor chain (was only immediate parent)
+- `contains_in_chain` checks all ancestors for service existence
+- Added `test_deep_parent_chain` test with 4-level hierarchy validation
 
 ### v0.1.9
 - Unsafe unchecked downcast for ~5-7% faster resolution

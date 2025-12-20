@@ -40,9 +40,12 @@ pub(crate) unsafe fn downcast_arc_unchecked<T: Send + Sync + 'static>(
 /// Thread-safe storage for service factories
 ///
 /// Uses `DashMap` with `ahash` for maximum concurrent performance.
+/// Supports hierarchical parent chain for deep scope resolution.
 pub struct ServiceStorage {
     /// Map from TypeId to factory
     factories: DashMap<TypeId, AnyFactory, RandomState>,
+    /// Optional parent storage for hierarchical resolution
+    parent: Option<Arc<ServiceStorage>>,
 }
 
 impl ServiceStorage {
@@ -62,6 +65,7 @@ impl ServiceStorage {
                 RandomState::new(),
                 8, // 8 shards balances creation speed vs concurrency
             ),
+            parent: None,
         }
     }
 
@@ -82,6 +86,20 @@ impl ServiceStorage {
                 RandomState::new(),
                 shard_amount,
             ),
+            parent: None,
+        }
+    }
+
+    /// Create a child storage with a parent reference for deep hierarchy resolution.
+    #[inline]
+    pub fn with_parent(parent: Arc<ServiceStorage>) -> Self {
+        Self {
+            factories: DashMap::with_capacity_and_hasher_and_shard_amount(
+                0,
+                RandomState::new(),
+                8,
+            ),
+            parent: Some(parent),
         }
     }
 
@@ -115,6 +133,69 @@ impl ServiceStorage {
         })
     }
 
+    /// Resolve a service by walking the full parent chain.
+    ///
+    /// Returns the service from the nearest scope that has it registered.
+    #[inline]
+    pub fn resolve_from_chain(&self, type_id: &TypeId) -> Option<Arc<dyn Any + Send + Sync>> {
+        // Check current scope first
+        if let Some(service) = self.resolve(type_id) {
+            return Some(service);
+        }
+
+        // Walk parent chain
+        let mut current = self.parent.as_ref();
+        while let Some(storage) = current {
+            if let Some(service) = storage.resolve(type_id) {
+                return Some(service);
+            }
+            current = storage.parent.as_ref();
+        }
+
+        None
+    }
+
+    /// Check if a service exists in this storage or any parent.
+    #[inline]
+    pub fn contains_in_chain(&self, type_id: &TypeId) -> bool {
+        // Check current scope first
+        if self.contains(type_id) {
+            return true;
+        }
+
+        // Walk parent chain
+        let mut current = self.parent.as_ref();
+        while let Some(storage) = current {
+            if storage.contains(type_id) {
+                return true;
+            }
+            current = storage.parent.as_ref();
+        }
+
+        false
+    }
+
+    /// Get reference to parent storage (if any)
+    #[inline]
+    pub fn parent(&self) -> Option<&Arc<ServiceStorage>> {
+        self.parent.as_ref()
+    }
+
+    /// Create a child storage from this storage.
+    ///
+    /// This is more efficient than `with_parent` as it takes self by Arc reference.
+    #[inline]
+    pub fn child(self: &Arc<Self>) -> Self {
+        Self {
+            factories: DashMap::with_capacity_and_hasher_and_shard_amount(
+                0,
+                RandomState::new(),
+                8,
+            ),
+            parent: Some(Arc::clone(self)),
+        }
+    }
+
     /// Get number of registered services
     #[inline]
     pub fn len(&self) -> usize {
@@ -127,10 +208,16 @@ impl ServiceStorage {
         self.factories.is_empty()
     }
 
-    /// Clear all services
+    /// Clear all services (preserves parent reference)
     #[inline]
     pub fn clear(&self) {
         self.factories.clear();
+    }
+
+    /// Check if this storage has a parent
+    #[inline]
+    pub fn has_parent(&self) -> bool {
+        self.parent.is_some()
     }
 
     /// Remove a service
