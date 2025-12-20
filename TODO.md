@@ -51,21 +51,16 @@ All fuzz targets pass with no crashes:
 
 ### Medium Priority
 
-#### 2. Single-Thread Feature with Rc<T>
+#### 2. Single-Thread Feature with Rc<T> ❌ SKIPPED
 **Gap Analysis:** Arc allocation ~10ns, Rc allocation ~5ns.
 
-**Solution:** Feature-gated single-thread mode for CLI tools:
-```rust
-#[cfg(feature = "single-thread")]
-type SmartPtr<T> = Rc<T>;
+**Reason Skipped:** Requires complete codebase refactor. DashMap requires `Send + Sync`
+values, so swapping `Arc` for `Rc` also requires replacing `DashMap` with
+`RefCell<HashMap>`. The maintenance burden of two separate implementations
+outweighs the ~5ns benefit per transient.
 
-#[cfg(not(feature = "single-thread"))]
-type SmartPtr<T> = Arc<T>;
-```
-
-**Expected Improvement:** ~5 ns per transient creation
-**Complexity:** Medium (API changes)
-**Risk:** Low
+**Alternative:** For CLI tools needing maximum performance, consider using
+transient factories sparingly or pre-warming services at startup.
 
 ---
 
