@@ -10,8 +10,8 @@ use parking_lot::RwLock;
 use std::any::{Any, TypeId};
 use std::sync::{Arc, Weak};
 
-#[cfg(feature = "tracing")]
-use tracing::{debug, trace};
+#[cfg(feature = "logging")]
+use tracing::{debug, trace, warn};
 
 /// High-performance dependency injection container.
 ///
@@ -55,8 +55,12 @@ impl Container {
     /// ```
     #[inline]
     pub fn new() -> Self {
-        #[cfg(feature = "tracing")]
-        debug!("Creating new DI container");
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            depth = 0,
+            "Creating new root DI container"
+        );
 
         Self {
             storage: Arc::new(ServiceStorage::new()),
@@ -108,14 +112,22 @@ impl Container {
     /// ```
     #[inline]
     pub fn scope(&self) -> Self {
-        #[cfg(feature = "tracing")]
-        debug!(depth = self.depth + 1, "Creating child scope");
+        let child_depth = self.depth + 1;
+
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            parent_depth = self.depth,
+            child_depth = child_depth,
+            parent_services = self.storage.len(),
+            "Creating child scope from parent container"
+        );
 
         Self {
             storage: Arc::new(ServiceStorage::new()),
             parent: Some(Arc::downgrade(&self.storage)),
             locked: Arc::new(RwLock::new(false)),
-            depth: self.depth + 1,
+            depth: child_depth,
         }
     }
 
@@ -149,11 +161,16 @@ impl Container {
         self.check_not_locked();
 
         let type_id = TypeId::of::<T>();
+        let type_name = std::any::type_name::<T>();
 
-        #[cfg(feature = "tracing")]
-        trace!(
-            service = std::any::type_name::<T>(),
-            "Registering singleton"
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            service = type_name,
+            lifetime = "singleton",
+            depth = self.depth,
+            service_count = self.storage.len() + 1,
+            "Registering singleton service"
         );
 
         self.storage
@@ -185,11 +202,16 @@ impl Container {
         self.check_not_locked();
 
         let type_id = TypeId::of::<T>();
+        let type_name = std::any::type_name::<T>();
 
-        #[cfg(feature = "tracing")]
-        trace!(
-            service = std::any::type_name::<T>(),
-            "Registering lazy singleton"
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            service = type_name,
+            lifetime = "lazy_singleton",
+            depth = self.depth,
+            service_count = self.storage.len() + 1,
+            "Registering lazy singleton service (will be created on first access)"
         );
 
         self.storage
@@ -226,11 +248,16 @@ impl Container {
         self.check_not_locked();
 
         let type_id = TypeId::of::<T>();
+        let type_name = std::any::type_name::<T>();
 
-        #[cfg(feature = "tracing")]
-        trace!(
-            service = std::any::type_name::<T>(),
-            "Registering transient"
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            service = type_name,
+            lifetime = "transient",
+            depth = self.depth,
+            service_count = self.storage.len() + 1,
+            "Registering transient service (new instance on every resolve)"
         );
 
         self.storage
@@ -302,16 +329,25 @@ impl Container {
     #[inline]
     pub fn get<T: Injectable>(&self) -> Result<Arc<T>> {
         let type_id = TypeId::of::<T>();
+        let type_name = std::any::type_name::<T>();
 
-        #[cfg(feature = "tracing")]
-        trace!(service = std::any::type_name::<T>(), "Resolving service");
+        #[cfg(feature = "logging")]
+        trace!(
+            target: "dependency_injector",
+            service = type_name,
+            depth = self.depth,
+            "Resolving service"
+        );
 
         // Try local storage first (most common case)
         if let Some(service) = self.storage.get::<T>() {
-            #[cfg(feature = "tracing")]
+            #[cfg(feature = "logging")]
             trace!(
-                service = std::any::type_name::<T>(),
-                "Found in current scope"
+                target: "dependency_injector",
+                service = type_name,
+                depth = self.depth,
+                location = "local",
+                "Service resolved from current scope"
             );
             return Ok(service);
         }
@@ -322,27 +358,52 @@ impl Container {
 
     /// Resolve from parent chain (internal)
     fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId) -> Result<Arc<T>> {
+        let type_name = std::any::type_name::<T>();
+
         if let Some(weak) = self.parent.as_ref() {
+            #[cfg(feature = "logging")]
+            trace!(
+                target: "dependency_injector",
+                service = type_name,
+                depth = self.depth,
+                "Service not in local scope, checking parent"
+            );
+
             if let Some(storage) = weak.upgrade() {
                 if let Some(arc) = storage.resolve(type_id)
                     && let Ok(typed) = arc.downcast::<T>()
                 {
-                    #[cfg(feature = "tracing")]
+                    #[cfg(feature = "logging")]
                     trace!(
-                        service = std::any::type_name::<T>(),
-                        "Found in parent scope"
+                        target: "dependency_injector",
+                        service = type_name,
+                        depth = self.depth,
+                        location = "parent",
+                        "Service resolved from parent scope"
                     );
                     return Ok(typed);
                 }
                 // Single-level parent resolution for now
                 // TODO: Support deep hierarchies by storing parent ref in storage
             } else {
+                #[cfg(feature = "logging")]
+                warn!(
+                    target: "dependency_injector",
+                    service = type_name,
+                    depth = self.depth,
+                    "Parent container was dropped while resolving service"
+                );
                 return Err(DiError::ParentDropped);
             }
         }
 
-        #[cfg(feature = "tracing")]
-        trace!(service = std::any::type_name::<T>(), "Service not found");
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            service = type_name,
+            depth = self.depth,
+            "Service not found in container or parent chain"
+        );
 
         Err(DiError::not_found::<T>())
     }
@@ -449,8 +510,13 @@ impl Container {
         let mut locked = self.locked.write();
         *locked = true;
 
-        #[cfg(feature = "tracing")]
-        debug!("Container locked");
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            depth = self.depth,
+            service_count = self.storage.len(),
+            "Container locked - no further registrations allowed"
+        );
     }
 
     /// Check if the container is locked.
@@ -464,10 +530,16 @@ impl Container {
     /// Does not affect parent scopes.
     #[inline]
     pub fn clear(&self) {
+        let count = self.storage.len();
         self.storage.clear();
 
-        #[cfg(feature = "tracing")]
-        debug!("Container cleared");
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            depth = self.depth,
+            services_removed = count,
+            "Container cleared - all services removed from this scope"
+        );
     }
 
     /// Panic if locked (internal helper).

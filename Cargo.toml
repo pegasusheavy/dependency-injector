@@ -12,8 +12,16 @@ repository = "https://github.com/pegasusheavy/dependency-injector"
 documentation = "https://docs.rs/dependency-injector"
 
 [features]
-default = ["tracing"]
-tracing = ["dep:tracing"]
+default = ["logging"]
+# Enable debug logging (recommended)
+logging = ["dep:tracing"]
+# Pretty console output (for development)
+logging-pretty = ["logging", "dep:tracing-subscriber"]
+# JSON structured logging (for production)
+logging-json = ["logging", "dep:tracing-subscriber", "tracing-subscriber/json"]
+# Legacy alias
+tracing = ["logging"]
+# Async support
 async = ["dep:tokio"]
 
 [dependencies]
@@ -32,8 +40,11 @@ parking_lot = "0.12"
 # Error handling
 thiserror = "2.0"
 
-# Optional tracing support
+# Structured logging (optional)
 tracing = { version = "0.1", optional = true }
+
+# Log subscriber for formatting (optional)
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 
 # Optional async support
 tokio = { version = "1.0", features = ["sync"], optional = true }

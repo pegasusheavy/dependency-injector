@@ -29,12 +29,14 @@ dependency-injector = "0.1"
 
 ```toml
 [dependencies]
-dependency-injector = { version = "0.1", features = ["async", "tracing"] }
+dependency-injector = { version = "0.1", features = ["logging-json"] }
 ```
 
 | Feature | Description |
 |---------|-------------|
-| `tracing` | Integration with the `tracing` crate (enabled by default) |
+| `logging` | Basic debug logging with `tracing` crate (enabled by default) |
+| `logging-json` | JSON structured logging output (recommended for production) |
+| `logging-pretty` | Colorful pretty logging output (recommended for development) |
 | `async` | Async support with Tokio |
 
 ## Quick Start
@@ -216,6 +218,55 @@ async fn main() -> Result<(), Error> {
 - 📚 **[Full Documentation](https://pegasusheavy.github.io/dependency-injector/)** - Comprehensive guides and API reference
 - 📖 **[docs.rs](https://docs.rs/dependency-injector)** - API documentation
 - 📊 **[Benchmarks](https://pegasusheavy.github.io/dependency-injector/benchmarks)** - Performance metrics
+
+## Logging
+
+Enable structured logging to see what the container is doing:
+
+```rust
+use dependency_injector::{Container, logging};
+
+fn main() {
+    // Initialize logging (JSON by default with logging-json, pretty with logging-pretty)
+    logging::init();
+
+    // Or use the builder for more control
+    logging::builder()
+        .debug()          // Set log level
+        .pretty()         // Use pretty output
+        .di_only()        // Only show dependency-injector logs
+        .init();
+
+    let container = Container::new();
+    // Logs: DEBUG dependency_injector: Creating new root DI container
+
+    container.singleton(MyService { name: "test".into() });
+    // Logs: DEBUG dependency_injector: Registering singleton service
+
+    let _ = container.get::<MyService>();
+    // Logs: TRACE dependency_injector: Resolving service
+}
+```
+
+### JSON Output (Production)
+
+```bash
+cargo run --features logging-json
+```
+
+```json
+{"timestamp":"2024-01-01T00:00:00.000Z","level":"DEBUG","fields":{"message":"Creating new root DI container","depth":0},"target":"dependency_injector"}
+```
+
+### Pretty Output (Development)
+
+```bash
+cargo run --features logging-pretty
+```
+
+```text
+  2024-01-01T00:00:00.000Z DEBUG dependency_injector: Creating new root DI container, depth: 0
+```
 
 ## Performance
 

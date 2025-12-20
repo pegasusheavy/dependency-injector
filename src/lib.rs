@@ -12,7 +12,7 @@
 //! - 🏭 **Lazy singletons** - Services created on first access
 //! - ♻️ **Transient services** - Fresh instance on every resolve
 //! - 🧵 **Thread-local cache** - Hot path optimization for frequently accessed services
-//! - 📊 **Observable** - Optional tracing integration
+//! - 📊 **Observable** - Optional tracing integration with JSON or pretty output
 //!
 //! ## Quick Start
 //!
@@ -106,6 +106,8 @@
 mod container;
 mod error;
 mod factory;
+#[cfg(feature = "logging")]
+pub mod logging;
 mod provider;
 mod scope;
 mod storage;
@@ -115,6 +117,10 @@ pub use error::*;
 pub use factory::*;
 pub use provider::*;
 pub use scope::*;
+
+// Re-export tracing macros for convenience when logging feature is enabled
+#[cfg(feature = "logging")]
+pub use tracing::{debug, error, info, trace, warn};
 
 // Re-export for convenience
 pub use std::sync::Arc;

@@ -6,6 +6,9 @@ use crate::{Container, Injectable, Result};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[cfg(feature = "logging")]
+use tracing::debug;
+
 /// Unique scope identifier.
 ///
 /// Each scope gets a unique ID for tracking and debugging.
@@ -76,27 +79,56 @@ impl ScopedContainer {
     /// Create a new scoped container with no parent.
     #[inline]
     pub fn new() -> Self {
+        let scope = Scope::new();
+
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            scope_id = scope.id(),
+            "Creating new root ScopedContainer"
+        );
+
         Self {
             container: Container::new(),
-            scope: Scope::new(),
+            scope,
         }
     }
 
     /// Create a scoped container from a parent container.
     #[inline]
     pub fn from_parent(parent: &Container) -> Self {
+        let scope = Scope::new();
+
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            scope_id = scope.id(),
+            parent_depth = parent.depth(),
+            "Creating ScopedContainer from parent Container"
+        );
+
         Self {
             container: parent.scope(),
-            scope: Scope::new(),
+            scope,
         }
     }
 
     /// Create a scoped container from another scoped container.
     #[inline]
     pub fn from_scope(parent: &ScopedContainer) -> Self {
+        let scope = Scope::new();
+
+        #[cfg(feature = "logging")]
+        debug!(
+            target: "dependency_injector",
+            scope_id = scope.id(),
+            parent_scope_id = parent.scope.id(),
+            "Creating child ScopedContainer from parent ScopedContainer"
+        );
+
         Self {
             container: parent.container.scope(),
-            scope: Scope::new(),
+            scope,
         }
     }
 

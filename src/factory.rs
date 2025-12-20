@@ -7,6 +7,9 @@ use once_cell::sync::OnceCell;
 use std::any::Any;
 use std::sync::Arc;
 
+#[cfg(feature = "logging")]
+use tracing::{debug, trace};
+
 /// A factory that creates service instances
 pub trait Factory: Send + Sync {
     /// Resolve the service, creating it if necessary
@@ -71,7 +74,29 @@ impl<T: Injectable, F: Fn() -> T + Send + Sync> LazyFactory<T, F> {
     /// Get the instance, creating it if necessary
     #[inline]
     pub fn get(&self) -> Arc<T> {
-        Arc::clone(self.instance.get_or_init(|| Arc::new((self.factory)())))
+        let was_empty = self.instance.get().is_none();
+
+        let result = Arc::clone(self.instance.get_or_init(|| {
+            #[cfg(feature = "logging")]
+            debug!(
+                target: "dependency_injector",
+                service = std::any::type_name::<T>(),
+                "Lazy singleton initializing on first access"
+            );
+
+            Arc::new((self.factory)())
+        }));
+
+        #[cfg(feature = "logging")]
+        if !was_empty {
+            trace!(
+                target: "dependency_injector",
+                service = std::any::type_name::<T>(),
+                "Lazy singleton already initialized, returning cached instance"
+            );
+        }
+
+        result
     }
 }
 
@@ -101,6 +126,13 @@ impl<T: Injectable, F: Fn() -> T + Send + Sync> TransientFactory<T, F> {
     /// Create a new instance
     #[inline]
     pub fn create(&self) -> Arc<T> {
+        #[cfg(feature = "logging")]
+        trace!(
+            target: "dependency_injector",
+            service = std::any::type_name::<T>(),
+            "Creating new transient instance"
+        );
+
         Arc::new((self.factory)())
     }
 }
