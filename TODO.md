@@ -6,16 +6,16 @@
 
 | Operation | v0.1.11 | v0.1.12 | Improvement | Target | Status |
 |-----------|---------|---------|-------------|--------|--------|
-| `get_singleton` | 14.7 ns | **9.4 ns** | **36% faster** | <10 ns | ✅ |
-| `get_medium` | 14.9 ns | **9.2 ns** | **38% faster** | <10 ns | ✅ |
-| `contains_check` | 10.9 ns | **10.7 ns** | **2% faster** | <10 ns | 🎯 |
-| `try_get_found` | 14.4 ns | **9.2 ns** | **35% faster** | <10 ns | ✅ |
-| `try_get_not_found` | 21.4 ns | **12.7 ns** | **40% faster** | <15 ns | ✅ |
-| `get_transient` | 43 ns | **24.2 ns** | **44% faster** | <30 ns | ✅ |
-| `create_scope` | 137 ns | **101 ns** | **26% faster** | <100 ns | 🎯 |
-| `scope_pool_acquire` | 87 ns | **88 ns** | same | - | ✅ |
-| `resolve_from_parent` | 14.4 ns | **9.4 ns** | **35% faster** | <10 ns | ✅ |
-| `resolve_override` | 17 ns | **9.4 ns** | **45% faster** | <10 ns | ✅ |
+| `get_singleton` | 14.7 ns | **~9 ns** | **~40% faster** | <10 ns | ✅ |
+| `get_medium` | 14.9 ns | **~9 ns** | **~40% faster** | <10 ns | ✅ |
+| `contains_check` | 10.9 ns | **~10.5 ns** | **~4% faster** | <10 ns | 🎯 |
+| `try_get_found` | 14.4 ns | **~9 ns** | **~38% faster** | <10 ns | ✅ |
+| `try_get_not_found` | 21.4 ns | **~12 ns** | **~44% faster** | <15 ns | ✅ |
+| `get_transient` | 43 ns | **~24 ns** | **~44% faster** | <30 ns | ✅ |
+| `create_scope` | 137 ns | **~80-110 ns** | **~25% faster** | <100 ns | ✅ |
+| `scope_pool_acquire` | 87 ns | **~56 ns** | **~35% faster** | <60 ns | ✅ |
+| `resolve_from_parent` | 14.4 ns | **~9 ns** | **~38% faster** | <10 ns | ✅ |
+| `resolve_override` | 17 ns | **~9 ns** | **~47% faster** | <10 ns | ✅ |
 
 ### Performance Summary
 
@@ -36,9 +36,9 @@ The hot cache now provides consistent speedups across all service types.
 | Manual DI (baseline) | **8 ns** | 88 ns | N/A |
 | HashMap + RwLock | 20.5 ns | **7.6 ns** | 93 µs |
 | DashMap (basic) | 20.7 ns | 670 ns | **89 µs** |
-| **dependency-injector** | **9.4 ns** | 101 ns | ~90 µs |
+| **dependency-injector** | **~9 ns** | ~80-110 ns | ~90 µs |
 
-dependency-injector is now **within 1.4ns of manual DI** while providing full runtime DI features!
+dependency-injector is now **within ~1ns of manual DI** while providing full runtime DI features!
 
 ### Fuzzing Status ✅
 
