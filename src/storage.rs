@@ -20,24 +20,43 @@ use std::hash::{Hash, Hasher};
 
 /// Downcast an `Arc<dyn Any + Send + Sync>` to `Arc<T>` without runtime type checking.
 ///
+/// This uses the same pattern as std's [`Arc::downcast`], but skips the `is::<T>()` check
+/// because callers guarantee type correctness via `TypeId` lookup.
+///
 /// # Safety
 ///
-/// This is safe when:
-/// - The `Arc` was originally created from a value of type `T`
-/// - The caller has verified the type through other means (e.g., TypeId lookup)
+/// The caller MUST guarantee that `arc` was originally created from an `Arc<T>`.
+/// This is typically ensured by looking up via `TypeId::of::<T>()`.
 ///
-/// In this crate, this is guaranteed because:
-/// - Factories are keyed by `TypeId::of::<T>()` at registration
+/// # Implementation Notes
+///
+/// When casting `*const dyn Any` (fat pointer) to `*const T` (thin pointer), Rust
+/// extracts just the data pointer portion, discarding the vtable metadata. This is
+/// well-defined behavior and exactly how std's `Arc::downcast` works:
+///
+/// ```ignore
+/// // From std::sync::Arc::downcast:
+/// unsafe {
+///     let ptr = Arc::into_raw(self);
+///     Ok(Arc::from_raw(ptr as *const T))
+/// }
+/// ```
+///
+/// # Crate Invariants
+///
+/// In this crate, safety is guaranteed because:
+/// - Factories are keyed by `TypeId::of::<T>()` at registration time
 /// - Resolution looks up by the same `TypeId::of::<T>()`
 /// - The factory stores the exact type that was registered
+/// - TypeId comparison is the same check that `Any::is::<T>()` performs
 #[inline]
 pub(crate) unsafe fn downcast_arc_unchecked<T: Send + Sync + 'static>(
     arc: Arc<dyn Any + Send + Sync>,
 ) -> Arc<T> {
-    // SAFETY: The caller guarantees that the Arc contains a value of type T.
-    // We convert Arc<dyn Any> -> raw pointer -> Arc<T>
+    // SAFETY: Caller guarantees arc contains type T (verified via TypeId lookup).
+    // This is the same pattern used by std::sync::Arc::downcast.
     let ptr = Arc::into_raw(arc);
-    // SAFETY: ptr came from Arc::into_raw and the caller guarantees T is correct
+    // Fat-to-thin pointer cast extracts the data pointer, discarding vtable metadata.
     unsafe { Arc::from_raw(ptr as *const T) }
 }
 
@@ -557,5 +576,29 @@ mod tests {
 
         storage.remove(&type_id);
         assert!(!storage.contains(&type_id));
+    }
+
+    /// Verify that unchecked downcast correctly handles fat-to-thin pointer conversion.
+    /// This test ensures the optimization is sound by checking pointer equality.
+    #[test]
+    fn test_unchecked_downcast_soundness() {
+        use std::any::Any;
+
+        // Create an Arc<T> and record its data pointer
+        let original: Arc<TestService> = Arc::new(TestService { value: 42 });
+        let original_ptr = Arc::as_ptr(&original);
+
+        // Coerce to Arc<dyn Any + Send + Sync>
+        let any_arc: Arc<dyn Any + Send + Sync> = original;
+
+        // Downcast back using our unchecked function
+        // SAFETY: We know the type is TestService
+        let recovered: Arc<TestService> = unsafe { super::downcast_arc_unchecked(any_arc) };
+
+        // Verify pointer equality (proves fat→thin cast is correct)
+        assert_eq!(original_ptr, Arc::as_ptr(&recovered));
+
+        // Verify value is intact
+        assert_eq!(recovered.value, 42);
     }
 }
