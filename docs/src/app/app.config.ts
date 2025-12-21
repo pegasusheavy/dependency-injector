@@ -35,7 +35,12 @@ import {
   faPuzzlePiece,
   faStar,
   faBox,
-  faScaleBalanced
+  faScaleBalanced,
+  faChartBar,
+  faUsers,
+  faLockOpen,
+  faListCheck,
+  faMicrochip
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -86,6 +91,11 @@ export function setupIconLibrary(library: FaIconLibrary) {
     faStar,
     faBox,
     faScaleBalanced,
+    faChartBar,
+    faUsers,
+    faLockOpen,
+    faListCheck,
+    faMicrochip,
     // Brand icons
     faGithub
   );
