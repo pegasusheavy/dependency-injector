@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-12-21
+
+### Changed
+- Replaced `RefCell` with `UnsafeCell` in thread-local hot cache (Phase 12)
+- Store pre-computed `u64` type hash instead of `TypeId` (Phase 13)
+- Added `#[cold]` annotation to `resolve_from_parents` (Phase 14)
+- Fast path for root containers skips parent chain walk (Phase 15)
+- Added `#[inline(always)]` to hot cache methods
+
+### Performance
+- `get_singleton`: 9.8ns → **9.4ns** (4% faster)
+- `try_get_not_found`: 13.7ns → **10.9ns** (20% faster)
+- Gap to manual DI reduced from 1.4ns to **1.0ns** (12% overhead)
+
 ## [0.2.0] - 2025-12-21
 
 ### Highlights
@@ -138,6 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scoped containers with parent resolution
 - Lock-free concurrent access via DashMap
 
+[0.2.1]: https://github.com/pegasusheavy/dependency-injector/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.12...v0.2.0
 [0.1.12]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.10...v0.1.11
