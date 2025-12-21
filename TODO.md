@@ -1,6 +1,6 @@
 # Performance Optimization TODO
 
-> dependency-injector v0.1.12 - December 2024
+> dependency-injector v0.2.0 - December 2024
 
 ## Current Benchmark Results
 
@@ -87,6 +87,11 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ---
 
 ## Changelog
+
+### v0.2.0
+- First stable release with all optimizations complete
+- ~9ns singleton resolution (within 1ns of manual DI)
+- Full feature set: scopes, pooling, derive macros, perfect hashing
 
 ### v0.1.12
 - Fast bit-mixing hash in hot cache (golden ratio multiplication)
