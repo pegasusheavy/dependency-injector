@@ -1,0 +1,74 @@
+---
+description: Conventional commit message format with scopes
+globs: ["**/*"]
+---
+
+# Commit Message Conventions
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) with scopes.
+
+## Format
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+## Types
+
+| Type | Description |
+|------|-------------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `style` | Formatting, no code change |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `perf` | Performance improvement |
+| `test` | Adding or updating tests |
+| `chore` | Build process, dependencies, tooling |
+| `ci` | CI/CD changes |
+
+## Scopes
+
+Always include a scope in parentheses:
+
+| Scope | Description |
+|-------|-------------|
+| `container` | Core Container implementation |
+| `storage` | ServiceStorage, FrozenStorage |
+| `factory` | AnyFactory, lifetimes |
+| `macros` | derive macros (#[derive(Inject)]) |
+| `logging` | Tracing/logging features |
+| `bench` | Benchmarks |
+| `docs` | Documentation website |
+| `ci` | GitHub Actions workflows |
+| `deps` | Dependencies |
+
+## Examples
+
+✅ Good:
+```
+feat(container): add thread-local hot cache for faster resolution
+fix(macros): handle Option<Arc<T>> in #[inject(optional)]
+docs(readme): add compile-time injection examples
+perf(storage): reduce DashMap shards for child scopes
+chore(deps): bump criterion to 0.5
+```
+
+❌ Bad:
+```
+feat: add hot cache          # Missing scope
+fix macros                   # Missing colon and scope format
+updated docs                 # Not conventional format
+```
+
+## Breaking Changes
+
+Add `!` after the scope for breaking changes:
+
+```
+feat(container)!: rename get() to resolve()
+```
