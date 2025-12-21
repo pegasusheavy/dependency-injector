@@ -11,10 +11,10 @@ NC='\033[0m' # No Color
 check_published() {
     local crate_name=$1
     local version=$2
-    
+
     # Query crates.io API for the specific version
     local response=$(curl -s "https://crates.io/api/v1/crates/${crate_name}/${version}")
-    
+
     # Check if version exists (response contains "version" field, not "errors")
     if echo "$response" | grep -q '"version"' && ! echo "$response" | grep -q '"errors"'; then
         return 0  # Already published
@@ -108,7 +108,7 @@ else
     cargo publish
     cd ..
     echo -e "${GREEN}✓ dependency-injector-derive published${NC}"
-    
+
     # Wait for crates.io to index the derive crate
     echo -e "${YELLOW}Waiting 30 seconds for crates.io to index...${NC}"
     sleep 30
