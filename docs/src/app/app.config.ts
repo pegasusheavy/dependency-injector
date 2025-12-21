@@ -34,7 +34,8 @@ import {
   faExclamationCircle,
   faPuzzlePiece,
   faStar,
-  faBox
+  faBox,
+  faScaleBalanced
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -84,6 +85,7 @@ export function setupIconLibrary(library: FaIconLibrary) {
     faPuzzlePiece,
     faStar,
     faBox,
+    faScaleBalanced,
     // Brand icons
     faGithub
   );
