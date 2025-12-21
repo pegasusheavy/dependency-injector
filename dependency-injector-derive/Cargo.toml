@@ -7,6 +7,9 @@ description = "Derive macros for dependency-injector"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/pegasusheavy/dependency-injector"
 documentation = "https://docs.rs/dependency-injector-derive"
+readme = "README.md"
+keywords = ["dependency-injection", "di", "derive", "macro", "proc-macro"]
+categories = ["development-tools", "rust-patterns"]
 
 [lib]
 proc-macro = true
