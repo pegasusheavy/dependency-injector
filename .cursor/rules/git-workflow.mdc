@@ -1,0 +1,36 @@
+---
+description: Git workflow and release tagging conventions
+globs: ["**/*"]
+---
+
+# Git Workflow Rules
+
+## Branching Strategy
+
+- **main** - Stable releases only. All tags are created from this branch.
+- **develop** - Active development. Features and fixes are merged here first.
+
+## Release Process
+
+1. Complete work on `develop` branch
+2. Create PR from `develop` to `main`
+3. Merge PR after review
+4. Create tag on `main` branch (never on develop)
+
+## Tagging
+
+- Tags must ALWAYS be created from the `main` branch
+- Use semantic versioning: `vX.Y.Z`
+- Include release notes in tag annotation
+
+```bash
+git checkout main
+git tag -a vX.Y.Z -m "Release vX.Y.Z - Description"
+git push origin vX.Y.Z
+```
+
+## Never Do
+
+- Never create tags on `develop` branch
+- Never push directly to `main` (use PRs)
+- Never skip the develop → main merge flow for releases
