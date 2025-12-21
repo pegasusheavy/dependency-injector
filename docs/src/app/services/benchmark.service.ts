@@ -166,7 +166,7 @@ export class BenchmarkService {
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
 
-    // Actual benchmark results from v0.1.12 (Dec 2024)
+    // Actual benchmark results from v0.2.0 (Dec 2025)
     // Phase 11: Fast bit-mixing hash + single DashMap lookup + reduced shards
     return {
       lastUpdate: new Date().toISOString(),
