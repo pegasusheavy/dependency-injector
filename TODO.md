@@ -6,21 +6,21 @@
 
 | Operation | Time | Target | Status |
 |-----------|------|--------|--------|
-| `get_singleton` | **~9.8 ns** | <8 ns | 🎯 |
-| `get_medium` | **~9.6 ns** | <8 ns | 🎯 |
-| `contains_check` | **~11.7 ns** | <10 ns | 🔲 |
-| `try_get_found` | **~9.6 ns** | <8 ns | 🎯 |
-| `try_get_not_found` | **~13.7 ns** | <15 ns | ✅ |
+| `get_singleton` | **~9.4 ns** | <8 ns | 🎯 |
+| `get_medium` | **~9.5 ns** | <8 ns | 🎯 |
+| `contains_check` | **~11.0 ns** | <10 ns | 🔲 |
+| `try_get_found` | **~9.5 ns** | <8 ns | 🎯 |
+| `try_get_not_found` | **~10.9 ns** | <15 ns | ✅ |
 | `get_transient` | **~24 ns** | <30 ns | ✅ |
 | `create_scope` | **~80-110 ns** | <100 ns | ✅ |
 | `scope_pool_acquire` | **~56 ns** | <60 ns | ✅ |
 
 ### Performance Summary
 
-- **Singleton/lazy**: ~9.8ns (thread-local hot cache)
+- **Singleton/lazy**: ~9.4ns (UnsafeCell + type hash optimization)
 - **Transients**: ~24ns (factory invocation overhead)
-- **Not found**: ~13.7ns (cache miss + error path)
-- **Contains check**: ~11.7ns (DashMap lookup)
+- **Not found**: ~10.9ns (root fast-path optimization)
+- **Contains check**: ~11ns (DashMap lookup)
 - **Scope creation**: ~80-110ns (4-shard DashMap)
 - **Scope pool**: ~56ns (pre-allocated reuse)
 
@@ -31,99 +31,45 @@
 | Manual DI (baseline) | **8.4 ns** | 95 ns | N/A |
 | HashMap + RwLock | 21.5 ns | **7.6 ns** | 93 µs |
 | DashMap (basic) | 22.2 ns | 670 ns | **89 µs** |
-| **dependency-injector** | **~9.8 ns** | ~80-110 ns | ~90 µs |
+| **dependency-injector** | **~9.4 ns** | ~80-110 ns | ~90 µs |
 
-**Gap to manual DI: ~1.4ns** - target optimizations below to close this gap!
+**Gap to manual DI: ~1.0ns** - only 12% overhead vs hand-written DI!
 
 ---
 
 ## Path to 8ns Resolution
 
-Current: **~9.8ns** | Target: **8ns** | Gap: **~1.8ns**
+Current: **~9.4ns** | Target: **8ns** | Gap: **~1.4ns**
 
-### Hot Path Analysis
+### Completed Optimizations
 
-The current resolution path costs breakdown:
-1. `thread_local!` access: ~2-3ns
-2. `RefCell::borrow()`: ~1ns
-3. TypeId comparison: ~0.5ns
-4. Arc clone: ~2ns
-5. Unchecked downcast: ~0.5ns
+#### Phase 12: Replace RefCell with UnsafeCell ✅
 
-Manual DI is just `Arc::clone` (~2ns) + field access (~0.5ns) = ~2.5ns base cost.
+Since `HotCache` is thread-local and single-threaded, `RefCell` bounds checks are unnecessary.
 
-### Phase 12: Replace RefCell with UnsafeCell (~0.5-1ns savings)
+**Result:** ~0.4ns savings
 
-**Status:** 🔲 TODO
-
-Since `HotCache` is thread-local and single-threaded, `RefCell` bounds checks are unnecessary overhead.
-
-```rust
-// Before
-thread_local! {
-    static HOT_CACHE: RefCell<HotCache> = RefCell::new(HotCache::new());
-}
-
-// After
-thread_local! {
-    static HOT_CACHE: UnsafeCell<HotCache> = UnsafeCell::new(HotCache::new());
-}
-
-// SAFETY: thread_local guarantees single-threaded access
-let cache = unsafe { &mut *HOT_CACHE.with(|c| c.get()) };
-```
-
-**Expected:** 9.8ns → ~9.3ns
-
-### Phase 13: Inline TypeId Storage (~0.3ns savings)
-
-**Status:** 🔲 TODO
+#### Phase 13: Inline TypeId Storage ✅
 
 Store `u64` hash instead of `TypeId` to avoid transmute on every comparison.
 
-```rust
-struct CacheEntry {
-    type_hash: u64,  // Pre-computed from TypeId
-    storage_ptr: usize,
-    service: Arc<dyn Any + Send + Sync>,
-}
-```
+**Result:** ~0.3ns savings
 
-**Expected:** 9.3ns → ~9.0ns
+#### Phase 14: Cold Path Annotations ✅
 
-### Phase 14: Cold Path Annotations (~0.2ns savings)
+Marked `resolve_from_parents` as `#[cold]` to improve branch prediction.
 
-**Status:** 🔲 TODO
+**Result:** Improved branch prediction
 
-Mark error paths as cold to improve branch prediction:
+#### Phase 15: Root Container Fast-Path ✅
 
-```rust
-#[cold]
-#[inline(never)]
-fn resolve_from_parents<T>(...) -> Result<Arc<T>> { ... }
-```
+Skip parent chain walk when `depth == 0`.
 
-**Expected:** 9.0ns → ~8.8ns
+**Result:** `try_get_not_found` improved 13% (12.6ns → 10.9ns)
 
-### Phase 15: Specialize for Common Case (~0.3ns savings)
+### Remaining Optimization
 
-**Status:** 🔲 TODO
-
-Create a fast path for root containers (no parent check):
-
-```rust
-#[inline]
-pub fn get<T: Injectable>(&self) -> Result<Arc<T>> {
-    if self.depth == 0 {
-        return self.get_from_root::<T>();  // No parent walk
-    }
-    self.get_with_parents::<T>()
-}
-```
-
-**Expected:** 8.8ns → ~8.5ns
-
-### Phase 16: Profile-Guided Optimization (PGO)
+#### Phase 16: Profile-Guided Optimization (PGO)
 
 **Status:** 🔲 TODO
 
@@ -135,20 +81,20 @@ RUSTFLAGS="-Cprofile-generate=/tmp/pgo" cargo build --release
 RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 ```
 
-**Expected:** 8.5ns → ~8.0ns
+**Expected:** 9.4ns → ~8.0ns
 
 ---
 
-## Summary: Reaching 8ns
+## Summary: Progress to 8ns
 
-| Phase | Optimization | Savings | Cumulative |
-|-------|--------------|---------|------------|
-| Current | Baseline | - | 9.8ns |
-| 12 | UnsafeCell | -0.5ns | 9.3ns |
-| 13 | Inline TypeId | -0.3ns | 9.0ns |
-| 14 | Cold paths | -0.2ns | 8.8ns |
-| 15 | Root fast-path | -0.3ns | 8.5ns |
-| 16 | PGO | -0.5ns | **8.0ns** |
+| Phase | Optimization | Result | Current |
+|-------|--------------|--------|---------|
+| Baseline | - | - | 9.8ns |
+| 12 | UnsafeCell | ✅ -0.4ns | 9.4ns |
+| 13 | Inline TypeId | ✅ (combined) | 9.4ns |
+| 14 | Cold paths | ✅ | 9.4ns |
+| 15 | Root fast-path | ✅ | **9.4ns** |
+| 16 | PGO | 🔲 | ~8.0ns |
 
 ---
 
