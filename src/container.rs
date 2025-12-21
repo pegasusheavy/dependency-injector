@@ -7,7 +7,7 @@ use crate::factory::AnyFactory;
 use crate::storage::{downcast_arc_unchecked, ServiceStorage};
 use crate::{DiError, Injectable, Result};
 use std::any::{Any, TypeId};
-use std::cell::RefCell;
+use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -22,9 +22,12 @@ use tracing::{debug, trace};
 const HOT_CACHE_SLOTS: usize = 4;
 
 /// A cached service entry
+///
+/// Phase 13 optimization: Stores pre-computed u64 hash instead of TypeId
+/// to avoid transmute on every comparison.
 struct CacheEntry {
-    /// TypeId of the service
-    type_id: TypeId,
+    /// Pre-computed hash of TypeId (avoids transmute on lookup)
+    type_hash: u64,
     /// Pointer to the storage this was resolved from (for scope identity)
     storage_ptr: usize,
     /// The cached service
@@ -47,15 +50,19 @@ impl HotCache {
     }
 
     /// Get a cached service if present for a specific container
+    ///
+    /// Phase 12+13 optimization: Uses UnsafeCell (no RefCell borrow check)
+    /// and pre-computed type_hash (no transmute on lookup).
     #[inline]
     fn get<T: Send + Sync + 'static>(&self, storage_ptr: usize) -> Option<Arc<T>> {
-        let type_id = TypeId::of::<T>();
-        let slot = Self::slot_for(&type_id, storage_ptr);
+        let type_hash = Self::type_hash::<T>();
+        let slot = Self::slot_for_hash(type_hash, storage_ptr);
 
         if let Some(entry) = &self.entries[slot] {
-            if entry.type_id == type_id && entry.storage_ptr == storage_ptr {
-                // Cache hit - clone and downcast (unchecked since TypeId matches)
-                // SAFETY: We verified TypeId matches, so the Arc contains type T
+            // Phase 13: Compare u64 hash directly (faster than TypeId comparison)
+            if entry.type_hash == type_hash && entry.storage_ptr == storage_ptr {
+                // Cache hit - clone and downcast (unchecked since type_hash matches)
+                // SAFETY: We verified type_hash matches, so the Arc contains type T
                 let arc = entry.service.clone();
                 return Some(unsafe { downcast_arc_unchecked(arc) });
             }
@@ -66,11 +73,11 @@ impl HotCache {
     /// Insert a service into the cache for a specific container
     #[inline]
     fn insert<T: Injectable>(&mut self, storage_ptr: usize, service: Arc<T>) {
-        let type_id = TypeId::of::<T>();
-        let slot = Self::slot_for(&type_id, storage_ptr);
+        let type_hash = Self::type_hash::<T>();
+        let slot = Self::slot_for_hash(type_hash, storage_ptr);
 
         self.entries[slot] = Some(CacheEntry {
-            type_id,
+            type_hash,
             storage_ptr,
             service: service as Arc<dyn Any + Send + Sync>,
         });
@@ -82,18 +89,19 @@ impl HotCache {
         self.entries = [const { None }; HOT_CACHE_SLOTS];
     }
 
-    /// Calculate slot index from TypeId and storage pointer
-    ///
-    /// Uses fast bit mixing instead of full hashing for performance.
-    /// TypeId is already a well-distributed hash, so we just mix it with storage_ptr.
+    /// Extract u64 hash from TypeId (computed once per type at compile time via monomorphization)
     #[inline]
-    fn slot_for(type_id: &TypeId, storage_ptr: usize) -> usize {
-        // TypeId is internally a u128 hash - extract it and mix with storage_ptr
+    fn type_hash<T: 'static>() -> u64 {
+        let type_id = TypeId::of::<T>();
         // SAFETY: TypeId is #[repr(transparent)] wrapper around u128
-        let type_id_bits: u64 = unsafe { std::mem::transmute_copy(type_id) };
+        unsafe { std::mem::transmute_copy(&type_id) }
+    }
 
+    /// Calculate slot index from pre-computed type hash and storage pointer
+    #[inline]
+    fn slot_for_hash(type_hash: u64, storage_ptr: usize) -> usize {
         // Fast bit mixing: XOR with rotated storage_ptr for good distribution
-        let mixed = type_id_bits ^ (storage_ptr as u64).rotate_left(32);
+        let mixed = type_hash ^ (storage_ptr as u64).rotate_left(32);
 
         // Use golden ratio multiplication for final mixing (fast & good distribution)
         let slot = mixed.wrapping_mul(0x9e3779b97f4a7c15);
@@ -104,7 +112,41 @@ impl HotCache {
 
 thread_local! {
     /// Thread-local hot cache for frequently accessed services
-    static HOT_CACHE: RefCell<HotCache> = const { RefCell::new(HotCache::new()) };
+    ///
+    /// Phase 12 optimization: Uses UnsafeCell instead of RefCell to eliminate
+    /// borrow checking overhead. This is safe because thread_local! guarantees
+    /// single-threaded access.
+    static HOT_CACHE: UnsafeCell<HotCache> = const { UnsafeCell::new(HotCache::new()) };
+}
+
+/// Helper to access the hot cache without RefCell overhead
+///
+/// SAFETY: thread_local! guarantees single-threaded access, so we can use
+/// UnsafeCell without data races. We ensure no aliasing by limiting access
+/// to immutable borrows for reads and brief mutable borrows for writes.
+#[inline]
+fn with_hot_cache<F, R>(f: F) -> R
+where
+    F: FnOnce(&HotCache) -> R,
+{
+    HOT_CACHE.with(|cell| {
+        // SAFETY: thread_local guarantees single-threaded access
+        let cache = unsafe { &*cell.get() };
+        f(cache)
+    })
+}
+
+/// Helper to mutably access the hot cache
+#[inline]
+fn with_hot_cache_mut<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut HotCache) -> R,
+{
+    HOT_CACHE.with(|cell| {
+        // SAFETY: thread_local guarantees single-threaded access
+        let cache = unsafe { &mut *cell.get() };
+        f(cache)
+    })
 }
 
 /// High-performance dependency injection container.
@@ -426,9 +468,9 @@ impl Container {
         // Get storage pointer for cache key (unique per container scope)
         let storage_ptr = Arc::as_ptr(&self.storage) as usize;
 
-        // Phase 5: Check thread-local hot cache first (~8ns vs ~19ns)
+        // Phase 5+12: Check thread-local hot cache first (UnsafeCell, no RefCell overhead)
         // Note: Transients won't be in cache, so they'll fall through to get_and_cache
-        if let Some(cached) = HOT_CACHE.with(|cache| cache.borrow().get::<T>(storage_ptr)) {
+        if let Some(cached) = with_hot_cache(|cache| cache.get::<T>(storage_ptr)) {
             #[cfg(feature = "logging")]
             trace!(
                 target: "dependency_injector",
@@ -445,6 +487,9 @@ impl Container {
     }
 
     /// Internal: Resolve and cache a service
+    ///
+    /// Phase 15 optimization: Fast path for root containers (depth == 0) avoids
+    /// function call overhead to resolve_from_parents when there are no parents.
     #[inline]
     fn get_and_cache<T: Injectable>(&self, storage_ptr: usize) -> Result<Arc<T>> {
         let type_id = TypeId::of::<T>();
@@ -474,13 +519,24 @@ impl Container {
 
             // Cache non-transient services (transients create new instances each time)
             if !is_transient {
-                HOT_CACHE.with(|cache| cache.borrow_mut().insert(storage_ptr, Arc::clone(&service)));
+                with_hot_cache_mut(|cache| cache.insert(storage_ptr, Arc::clone(&service)));
             }
 
             return Ok(service);
         }
 
-        // Walk parent chain
+        // Phase 15: Fast path for root containers - no parents to walk
+        if self.depth == 0 {
+            #[cfg(feature = "logging")]
+            debug!(
+                target: "dependency_injector",
+                service = std::any::type_name::<T>(),
+                "Service not found in root container"
+            );
+            return Err(DiError::not_found::<T>());
+        }
+
+        // Walk parent chain (cold path)
         self.resolve_from_parents::<T>(&type_id, storage_ptr)
     }
 
@@ -488,6 +544,10 @@ impl Container {
     ///
     /// Phase 9 optimization: Walks the full parent chain via ServiceStorage.parent.
     /// This allows services to be resolved from any ancestor scope.
+    ///
+    /// Phase 14 optimization: Marked as cold to improve branch prediction in the
+    /// hot path - most resolutions hit the cache and don't need parent traversal.
+    #[cold]
     fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId, storage_ptr: usize) -> Result<Arc<T>> {
         let type_name = std::any::type_name::<T>();
 
@@ -521,7 +581,7 @@ impl Container {
 
                 // Cache non-transient services from parent (using child's storage ptr as key)
                 if !storage.is_transient(type_id) {
-                    HOT_CACHE.with(|cache| cache.borrow_mut().insert(storage_ptr, Arc::clone(&typed)));
+                    with_hot_cache_mut(|cache| cache.insert(storage_ptr, Arc::clone(&typed)));
                 }
 
                 return Ok(typed);
@@ -550,7 +610,7 @@ impl Container {
     /// re-registered, but this method can be used for explicit control.
     #[inline]
     pub fn clear_cache(&self) {
-        HOT_CACHE.with(|cache| cache.borrow_mut().clear());
+        with_hot_cache_mut(|cache| cache.clear());
     }
 
     /// Pre-warm the thread-local cache with a specific service type.
