@@ -53,7 +53,7 @@ impl HotCache {
     ///
     /// Phase 12+13 optimization: Uses UnsafeCell (no RefCell borrow check)
     /// and pre-computed type_hash (no transmute on lookup).
-    #[inline]
+    #[inline(always)]
     fn get<T: Send + Sync + 'static>(&self, storage_ptr: usize) -> Option<Arc<T>> {
         let type_hash = Self::type_hash::<T>();
         let slot = Self::slot_for_hash(type_hash, storage_ptr);
@@ -90,7 +90,7 @@ impl HotCache {
     }
 
     /// Extract u64 hash from TypeId (computed once per type at compile time via monomorphization)
-    #[inline]
+    #[inline(always)]
     fn type_hash<T: 'static>() -> u64 {
         let type_id = TypeId::of::<T>();
         // SAFETY: TypeId is #[repr(transparent)] wrapper around u128
@@ -98,7 +98,7 @@ impl HotCache {
     }
 
     /// Calculate slot index from pre-computed type hash and storage pointer
-    #[inline]
+    #[inline(always)]
     fn slot_for_hash(type_hash: u64, storage_ptr: usize) -> usize {
         // Fast bit mixing: XOR with rotated storage_ptr for good distribution
         let mixed = type_hash ^ (storage_ptr as u64).rotate_left(32);
@@ -124,7 +124,7 @@ thread_local! {
 /// SAFETY: thread_local! guarantees single-threaded access, so we can use
 /// UnsafeCell without data races. We ensure no aliasing by limiting access
 /// to immutable borrows for reads and brief mutable borrows for writes.
-#[inline]
+#[inline(always)]
 fn with_hot_cache<F, R>(f: F) -> R
 where
     F: FnOnce(&HotCache) -> R,
@@ -137,7 +137,7 @@ where
 }
 
 /// Helper to mutably access the hot cache
-#[inline]
+#[inline(always)]
 fn with_hot_cache_mut<F, R>(f: F) -> R
 where
     F: FnOnce(&mut HotCache) -> R,
