@@ -19,6 +19,7 @@ use tracing::{debug, trace};
 // =============================================================================
 
 /// Number of slots in the thread-local hot cache (power of 2 for fast indexing)
+/// 4 slots fits in a single cache line and provides good hit rates for typical apps.
 const HOT_CACHE_SLOTS: usize = 4;
 
 /// A cached service entry
