@@ -86,46 +86,6 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 
 ---
 
-## Changelog
-
-### v0.2.0
-- First stable release with all optimizations complete
-- ~9ns singleton resolution (within 1ns of manual DI)
-- Full feature set: scopes, pooling, derive macros, perfect hashing
-
-### v0.1.12
-- Fast bit-mixing hash in hot cache (golden ratio multiplication)
-- Single DashMap lookup via `get_with_transient_flag()`
-- Reduced shard count for child scopes (8 → 4)
-- All resolution benchmarks now **under 10ns** for cached services
-
-### v0.1.11
-- `perfect-hash` feature with `FrozenStorage` (MPHF)
-- `container.freeze()` for O(1) lookup
-- `frozen_contains`: 3.9ns (60% faster than DashMap)
-
-### v0.1.10
-- Deep parent chain resolution (grandparents and beyond)
-
-### v0.1.9
-- Unsafe unchecked downcast (~5-7% faster resolution)
-
-### v0.1.8
-- Fluent batch registration API
-
-### v0.1.7
-- `ScopePool` for high-throughput web servers
-
-### v0.1.6
-- Thread-local hot cache
-
-### v0.1.5
-- `#[derive(Inject)]` macro
-
-### v0.1.2-v0.1.4
-- AtomicBool lock, enum-based factories, batch API
-
----
-
 *Last updated: December 2024*
 *Fuzzing: All targets passing (1M+ iterations)*
+*See [CHANGELOG.md](CHANGELOG.md) for version history*
