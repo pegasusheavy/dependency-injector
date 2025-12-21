@@ -43,13 +43,13 @@ struct Cache {
 struct UserService {
     #[inject]
     db: Arc<Database>,
-    
+
     #[inject]
     cache: Arc<Cache>,
-    
+
     #[inject(optional)]
     logger: Option<Arc<Logger>>,  // Won't fail if not registered
-    
+
     // Non-injected fields use Default::default()
     request_count: u64,
 }
@@ -61,7 +61,7 @@ fn main() -> dependency_injector::Result<()> {
 
     // Automatically resolve all #[inject] fields
     let service = UserService::from_container(&container)?;
-    
+
     Ok(())
 }
 ```
