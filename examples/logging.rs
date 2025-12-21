@@ -13,16 +13,19 @@
 use dependency_injector::{Container, ScopedContainer};
 
 // Example services
+#[allow(dead_code)]
 #[derive(Clone)]
 struct Database {
     url: String,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct UserService {
     name: String,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct RequestContext {
     request_id: String,

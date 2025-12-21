@@ -113,7 +113,7 @@ impl ServiceStorage {
 
     /// Insert a factory
     #[inline]
-    pub fn insert(&self, type_id: TypeId, factory: AnyFactory) {
+    pub(crate) fn insert(&self, type_id: TypeId, factory: AnyFactory) {
         self.factories.insert(type_id, factory);
     }
 

@@ -1343,6 +1343,7 @@ mod tests {
     fn test_batch_registration() {
         #[derive(Clone)]
         struct ServiceA(i32);
+        #[allow(dead_code)]
         #[derive(Clone)]
         struct ServiceB(String);
 

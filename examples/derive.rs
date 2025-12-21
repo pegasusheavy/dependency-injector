@@ -7,16 +7,19 @@ use dependency_injector::{Container, Inject};
 use std::sync::Arc;
 
 // Dependencies
+#[allow(dead_code)]
 #[derive(Clone)]
 struct Database {
     url: String,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct Cache {
     size: usize,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct Logger {
     level: String,
@@ -50,6 +53,7 @@ impl UserService {
 }
 
 // Nested injection example
+#[allow(dead_code)]
 #[derive(Inject)]
 struct ApiController {
     #[inject]

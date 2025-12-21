@@ -14,6 +14,7 @@ use std::sync::Arc;
 // ============================================================================
 
 /// Simple value service
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct Config {
     database_url: String,
@@ -30,6 +31,7 @@ impl Default for Config {
 }
 
 /// Service with a dependency
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct Database {
     config: Arc<Config>,
@@ -42,10 +44,10 @@ impl Database {
 }
 
 /// Service with multiple dependencies
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct UserRepository {
     db: Arc<Database>,
-    #[allow(dead_code)]
     cache_enabled: bool,
 }
 
@@ -59,10 +61,10 @@ impl UserRepository {
 }
 
 /// Top-level service with deep dependency chain
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct UserService {
     repo: Arc<UserRepository>,
-    #[allow(dead_code)]
     name: String,
 }
 
@@ -82,6 +84,7 @@ impl UserService {
 mod manual_di {
     use super::*;
 
+    #[allow(dead_code)]
     pub struct Container {
         config: Arc<Config>,
         database: Arc<Database>,
@@ -89,6 +92,7 @@ mod manual_di {
         user_service: Arc<UserService>,
     }
 
+    #[allow(dead_code)]
     impl Container {
         pub fn new() -> Self {
             let config = Arc::new(Config::default());
