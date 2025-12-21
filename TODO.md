@@ -1,6 +1,6 @@
 # Performance Optimization TODO
 
-> dependency-injector v0.2.0 - December 2024
+> dependency-injector v0.2.0 - December 2025
 
 ## Current Benchmark Results
 
@@ -86,6 +86,6 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 
 ---
 
-*Last updated: December 2024*
+*Last updated: December 2025*
 *Fuzzing: All targets passing (1M+ iterations)*
 *See [CHANGELOG.md](CHANGELOG.md) for version history*

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2024-12-21
+## [0.2.0] - 2025-12-21
 
 ### Highlights
 - **~9ns singleton resolution** - within 1ns of manual dependency injection
@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | `scope_pool_acquire` | ~56 ns |
 | `frozen_contains` | ~4 ns |
 
-## [0.1.12] - 2024-12-21
+## [0.1.12] - 2025-12-21
 
 ### Changed
 - Fast bit-mixing hash in hot cache (golden ratio multiplication)
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `get_singleton`: 14.7ns → 9ns (40% faster)
 - `get_transient`: 43ns → 24ns (44% faster)
 
-## [0.1.11] - 2024-12-20
+## [0.1.11] - 2025-12-20
 
 ### Added
 - `perfect-hash` feature with `FrozenStorage` using MPHF
@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 - `frozen_contains`: 3.9ns (60% faster than DashMap)
 
-## [0.1.10] - 2024-12-20
+## [0.1.10] - 2025-12-20
 
 ### Added
 - Deep parent chain resolution for grandparent and beyond
@@ -66,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `ServiceStorage` now holds optional parent reference for chain walking
 
-## [0.1.9] - 2024-12-19
+## [0.1.9] - 2025-12-19
 
 ### Changed
 - Unsafe unchecked downcast for Arc (TypeId already verified)
@@ -74,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 - ~5-7% faster resolution across all benchmarks
 
-## [0.1.8] - 2024-12-19
+## [0.1.8] - 2025-12-19
 
 ### Added
 - Fluent batch registration API: `container.batch().singleton(A).done()`
@@ -82,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 - Batch registration ~1% faster than individual registrations
 
-## [0.1.7] - 2024-12-18
+## [0.1.7] - 2025-12-18
 
 ### Added
 - `ScopePool` for pre-allocated scope reuse
@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 - 30% faster scope acquisition vs fresh creation
 
-## [0.1.6] - 2024-12-18
+## [0.1.6] - 2025-12-18
 
 ### Added
 - Thread-local hot cache for frequently accessed services
@@ -101,26 +101,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 21% faster singleton resolution (18.7ns → 14.8ns)
 - 48% faster parent resolution (28.7ns → 14.8ns)
 
-## [0.1.5] - 2024-12-17
+## [0.1.5] - 2025-12-17
 
 ### Added
 - `#[derive(Inject)]` compile-time DI macro
 - `#[inject]` and `#[inject(optional)]` attributes
 - `from_container()` method generation
 
-## [0.1.4] - 2024-12-17
+## [0.1.4] - 2025-12-17
 
 ### Added
 - Batch registration API with `BatchRegistrar`
 
-## [0.1.3] - 2024-12-16
+## [0.1.3] - 2025-12-16
 
 ### Changed
 - Enum-based `AnyFactory` (eliminated vtable indirection)
 - Pre-erased `Arc<dyn Any>` storage in factories
 - Cached parent `Arc<ServiceStorage>`
 
-## [0.1.2] - 2024-12-16
+## [0.1.2] - 2025-12-16
 
 ### Changed
 - Replaced `RwLock<bool>` with `AtomicBool` for lock state
@@ -130,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 - Registration: 854ns → 250ns (71% faster)
 
-## [0.1.1] - 2024-12-15
+## [0.1.1] - 2025-12-15
 
 ### Added
 - Initial release with core DI functionality
