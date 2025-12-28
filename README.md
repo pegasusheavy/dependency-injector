@@ -410,7 +410,7 @@ func main() {
     defer container.Free()
 
     container.RegisterSingleton("config", `{"database": "postgres://localhost"}`)
-    
+
     config, _ := container.Resolve("config")
     fmt.Println(config)
 }

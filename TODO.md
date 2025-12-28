@@ -134,7 +134,9 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 
 ### Status: ✅ No Leaks Detected
 
-Memory profiling verified with `dhat` heap profiler (December 2025):
+Memory profiling verified with both `dhat` and Valgrind (December 2025):
+
+#### dhat Heap Profiler Results
 
 | Metric | Value | Status |
 |--------|-------|--------|
@@ -143,10 +145,23 @@ Memory profiling verified with `dhat` heap profiler (December 2025):
 | At exit (t-end) | 1,830 bytes | ✅ No leaks |
 | Allocation blocks | 51,800 | Properly freed |
 
-The 1,830 bytes at exit are expected static allocations:
-- Thread-local `HOT_CACHE` storage
-- Global allocator metadata
-- Static string literals
+#### Valgrind Memcheck Results
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| Definitely lost | **0 bytes** | ✅ No leaks |
+| Indirectly lost | **0 bytes** | ✅ No leaks |
+| Possibly lost | **0 bytes** | ✅ No leaks |
+| Still reachable | 544 bytes | Expected |
+| Total allocations | 51,808 | Properly freed |
+| Total freed | 51,804 | 99.99% |
+| Heap allocated | 7.7 MB | Expected |
+| Errors | **0** | ✅ Clean |
+
+The 544 bytes "still reachable" at exit are expected static allocations:
+- Thread-local `HOT_CACHE` storage (64 bytes)
+- Thread info BTree for stack overflow handling (456 bytes)
+- Global allocator metadata (24 bytes)
 
 ### Running Memory Profiler
 
@@ -182,5 +197,5 @@ RUSTFLAGS="-Z sanitizer=leak" cargo +nightly run --example memory_profiler
 
 *Last updated: December 2025*
 *Fuzzing: All targets passing (1M+ iterations)*
-*Memory: No leaks detected (dhat verified)*
+*Memory: No leaks detected (dhat + Valgrind verified)*
 *See [CHANGELOG.md](CHANGELOG.md) for version history*
