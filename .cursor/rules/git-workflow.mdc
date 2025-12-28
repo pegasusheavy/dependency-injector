@@ -1,0 +1,70 @@
+---
+description: Git workflow and release conventions
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Git Workflow
+
+## Branch Strategy
+
+- `main` - Stable releases only, protected branch
+- `develop` - Integration branch for features
+- Feature branches from `develop`
+
+## Tags and Releases
+
+**IMPORTANT**: Tags are ALWAYS created from the `main` branch, never from `develop`.
+
+```bash
+# Correct workflow for releases:
+git checkout main
+git merge develop
+git tag -a v0.x.y -m "Release v0.x.y"
+git push origin main --tags
+```
+
+## Conventional Commits
+
+Use conventional commit format with scope:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+[optional footer]
+```
+
+### Types
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation changes
+- `perf` - Performance improvements
+- `refactor` - Code refactoring
+- `test` - Adding/updating tests
+- `chore` - Maintenance tasks
+- `ci` - CI/CD changes
+
+### Scopes
+- `container` - Container implementation
+- `storage` - Storage/caching layer
+- `factory` - Factory/provider system
+- `scope` - Scoping functionality
+- `macros` - Derive macros (dependency-injector-derive)
+- `docs` - Documentation site
+- `bench` - Benchmarks
+- `examples` - Example code
+- `changelog` - Changelog updates
+
+### Examples
+
+```
+feat(container): add batch registration API
+fix(storage): resolve race condition in hot cache
+docs(macros): add derive macro documentation
+perf(container): optimize singleton resolution to 8ns
+```
+
+**DO NOT** use bare types without scopes:
+- ❌ `docs: update readme`
+- ✅ `docs(readme): update installation instructions`

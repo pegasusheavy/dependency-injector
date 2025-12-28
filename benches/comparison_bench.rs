@@ -2,8 +2,10 @@
 //!
 //! This benchmark compares dependency-injector against:
 //! - shaku (compile-time DI with derive macros)
-//! - waiter_di (runtime DI)
+//! - ferrous-di (runtime DI with scopes)
 //! - Manual DI patterns (baseline)
+//! - HashMap + RwLock (naive runtime DI)
+//! - DashMap (concurrent runtime DI)
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::hint::black_box;
@@ -197,6 +199,124 @@ mod dashmap_di {
 }
 
 // ============================================================================
+// Shaku DI (Compile-time DI)
+// ============================================================================
+
+mod shaku_di {
+    use shaku::{module, Component, Interface, HasComponent};
+    use std::sync::Arc;
+
+    // Define interfaces
+    pub trait ConfigInterface: Interface {
+        fn database_url(&self) -> &str;
+        fn max_connections(&self) -> u32;
+    }
+
+    pub trait DatabaseInterface: Interface {
+        fn config(&self) -> Arc<dyn ConfigInterface>;
+    }
+
+    // Implement components
+    #[derive(Component)]
+    #[shaku(interface = ConfigInterface)]
+    pub struct ConfigImpl {
+        #[shaku(default = "postgres://localhost/test".to_string())]
+        database_url: String,
+        #[shaku(default = 10)]
+        max_connections: u32,
+    }
+
+    impl ConfigInterface for ConfigImpl {
+        fn database_url(&self) -> &str {
+            &self.database_url
+        }
+        fn max_connections(&self) -> u32 {
+            self.max_connections
+        }
+    }
+
+    #[derive(Component)]
+    #[shaku(interface = DatabaseInterface)]
+    pub struct DatabaseImpl {
+        #[shaku(inject)]
+        config: Arc<dyn ConfigInterface>,
+    }
+
+    impl DatabaseInterface for DatabaseImpl {
+        fn config(&self) -> Arc<dyn ConfigInterface> {
+            Arc::clone(&self.config)
+        }
+    }
+
+    // Define module
+    module! {
+        pub AppModule {
+            components = [ConfigImpl, DatabaseImpl],
+            providers = []
+        }
+    }
+
+    pub fn create_module() -> AppModule {
+        AppModule::builder().build()
+    }
+
+    pub fn resolve_config(module: &AppModule) -> Arc<dyn ConfigInterface> {
+        module.resolve()
+    }
+
+    pub fn resolve_database(module: &AppModule) -> Arc<dyn DatabaseInterface> {
+        module.resolve()
+    }
+}
+
+// ============================================================================
+// Ferrous DI (Runtime DI with scopes)
+// ============================================================================
+
+mod ferrous_di_bench {
+    use ferrous_di::{ServiceCollection, ServiceProvider, Resolver, ResolverContext};
+    use std::sync::Arc;
+
+    #[derive(Clone, Debug)]
+    pub struct Config {
+        pub database_url: String,
+        pub max_connections: u32,
+    }
+
+    impl Default for Config {
+        fn default() -> Self {
+            Self {
+                database_url: "postgres://localhost/test".to_string(),
+                max_connections: 10,
+            }
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct Database {
+        pub config: Arc<Config>,
+    }
+
+    pub fn create_provider() -> ServiceProvider {
+        let mut services = ServiceCollection::new();
+        services.add_singleton(Config::default());
+        services.add_singleton_factory(|ctx: &ResolverContext| {
+            let config: Arc<Config> = ctx.get_required();
+            Database { config }
+        });
+        services.build()
+    }
+
+    pub fn resolve_config(sp: &ServiceProvider) -> Arc<Config> {
+        sp.get_required()
+    }
+
+    pub fn resolve_database(sp: &ServiceProvider) -> Arc<Database> {
+        sp.get_required()
+    }
+}
+
+// ============================================================================
 // Benchmarks
 // ============================================================================
 
@@ -222,6 +342,18 @@ fn bench_singleton_resolution(c: &mut Criterion) {
     dashmap.register(Config::default());
     group.bench_function("dashmap_basic", |b| {
         b.iter(|| black_box(dashmap.get::<Config>()))
+    });
+
+    // Shaku DI
+    let shaku_module = shaku_di::create_module();
+    group.bench_function("shaku", |b| {
+        b.iter(|| black_box(shaku_di::resolve_config(&shaku_module)))
+    });
+
+    // Ferrous DI
+    let ferrous_sp = ferrous_di_bench::create_provider();
+    group.bench_function("ferrous_di", |b| {
+        b.iter(|| black_box(ferrous_di_bench::resolve_config(&ferrous_sp)))
     });
 
     // dependency-injector
@@ -268,6 +400,18 @@ fn bench_deep_dependency_chain(c: &mut Criterion) {
         b.iter(|| black_box(dashmap.get::<UserService>()))
     });
 
+    // Shaku DI (2-level chain: Config -> Database)
+    let shaku_module = shaku_di::create_module();
+    group.bench_function("shaku", |b| {
+        b.iter(|| black_box(shaku_di::resolve_database(&shaku_module)))
+    });
+
+    // Ferrous DI (2-level chain: Config -> Database)
+    let ferrous_sp = ferrous_di_bench::create_provider();
+    group.bench_function("ferrous_di", |b| {
+        b.iter(|| black_box(ferrous_di_bench::resolve_database(&ferrous_sp)))
+    });
+
     // dependency-injector
     let di = dependency_injector::Container::new();
     di.singleton((*config).clone());
@@ -294,6 +438,14 @@ fn bench_container_creation(c: &mut Criterion) {
 
     group.bench_function("dashmap_basic", |b| {
         b.iter(|| black_box(dashmap_di::Container::new()))
+    });
+
+    group.bench_function("shaku", |b| {
+        b.iter(|| black_box(shaku_di::create_module()))
+    });
+
+    group.bench_function("ferrous_di", |b| {
+        b.iter(|| black_box(ferrous_di_bench::create_provider()))
     });
 
     group.bench_function("dependency_injector", |b| {
@@ -482,6 +634,50 @@ fn bench_mixed_workload(c: &mut Criterion) {
         })
     });
 
+    // Shaku - Note: Shaku doesn't support scopes in the same way
+    let shaku_module = shaku_di::create_module();
+    group.bench_function("shaku", |b| {
+        b.iter(|| {
+            for i in 0..100 {
+                match i % 20 {
+                    0..=15 => {
+                        let _ = black_box(shaku_di::resolve_config(&shaku_module));
+                    }
+                    16..=18 => {
+                        let _ = black_box(shaku_di::resolve_database(&shaku_module));
+                    }
+                    _ => {
+                        // Shaku requires rebuild for new module
+                        let module = shaku_di::create_module();
+                        let _ = black_box(module);
+                    }
+                }
+            }
+        })
+    });
+
+    // Ferrous DI
+    let ferrous_sp = ferrous_di_bench::create_provider();
+    group.bench_function("ferrous_di", |b| {
+        b.iter(|| {
+            for i in 0..100 {
+                match i % 20 {
+                    0..=15 => {
+                        let _ = black_box(ferrous_di_bench::resolve_config(&ferrous_sp));
+                    }
+                    16..=18 => {
+                        let _ = black_box(ferrous_di_bench::resolve_database(&ferrous_sp));
+                    }
+                    _ => {
+                        // Ferrous DI scope creation
+                        let scope = ferrous_sp.create_scope();
+                        let _ = black_box(scope);
+                    }
+                }
+            }
+        })
+    });
+
     group.finish();
 }
 
@@ -533,4 +729,3 @@ criterion_group!(
 );
 
 criterion_main!(comparison_benches);
-

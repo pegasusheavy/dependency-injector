@@ -1,0 +1,57 @@
+---
+description: Rust coding conventions and patterns for the dependency-injector library
+globs: ["**/*.rs"]
+alwaysApply: true
+---
+
+# Rust Conventions for dependency-injector
+
+## Performance-Critical Code
+
+This is a high-performance dependency injection library targeting sub-10ns resolution times. Follow these guidelines:
+
+### Inlining
+- Use `#[inline]` for small, frequently-called methods
+- Use `#[inline(always)]` sparingly, only for critical hot paths
+- The `get()`, `contains()`, and `try_get()` methods are hot paths
+
+### Memory Layout
+- Prefer `Arc<T>` over `Box<T>` for shared ownership
+- Use `DashMap` for concurrent access, not `RwLock<HashMap>`
+- Use `UnsafeCell` instead of `RefCell` for thread-local storage (with proper safety comments)
+
+### Unsafe Code
+- All unsafe blocks MUST have a `// SAFETY:` comment explaining the invariants
+- Prefer safe abstractions when performance difference is negligible
+- Document preconditions for unsafe functions
+
+## Type System
+
+### Injectable Trait
+Services must implement `Injectable` which requires:
+- `Send + Sync + 'static`
+- This enables safe sharing across threads
+
+### Service Lifetimes
+- **Singleton**: Single instance, shared via `Arc<T>`
+- **Lazy Singleton**: Created on first access, then cached
+- **Transient**: New instance per resolution
+- **Scoped**: Per-scope singleton (via child containers)
+
+## Error Handling
+
+- Use `thiserror` for error definitions
+- Return `Result<T, ContainerError>` for fallible operations
+- Provide `try_*` variants that return `Option<T>`
+
+## Documentation
+
+- All public APIs must have doc comments
+- Include examples in doc comments for complex APIs
+- Use `# Examples` sections with runnable code
+
+## Testing
+
+- Unit tests go in `#[cfg(test)] mod tests` within each file
+- Integration tests go in `tests/` directory
+- Benchmarks go in `benches/` directory using Criterion

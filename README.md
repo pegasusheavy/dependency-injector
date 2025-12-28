@@ -322,13 +322,28 @@ cargo run --features logging-pretty
 The container is built for high-performance scenarios:
 
 - **Lock-free reads** using `DashMap`
+- **Thread-local hot cache** for sub-20ns resolution
 - **Minimal allocations** with `Arc` sharing
 - **No runtime reflection** - all type resolution at compile time
+
+### Comparison with Other Rust DI Libraries
+
+| Library | Singleton Resolution | Mixed Workload |
+|---------|---------------------|----------------|
+| **dependency-injector** | ~17-27 ns | **2.2 µs** |
+| shaku | ~17-21 ns | 2.5-15 µs |
+| ferrous-di | ~57-70 ns | 7.6-11 µs |
+
+*See [RUST_DI_COMPARISON.md](RUST_DI_COMPARISON.md) for full benchmarks*
 
 Run benchmarks locally:
 
 ```bash
-cargo bench
+# Internal benchmarks
+cargo bench --bench container_bench
+
+# Comparison against other DI crates
+cargo bench --bench comparison_bench
 ```
 
 ## Fuzzing

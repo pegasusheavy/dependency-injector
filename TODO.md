@@ -1,6 +1,6 @@
 # Performance Optimization TODO
 
-> dependency-injector v0.2.0 - December 2025
+> dependency-injector v0.2.1 - December 2025
 
 ## Current Benchmark Results
 
@@ -130,6 +130,57 @@ cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 
 ---
 
+## Memory Profiling
+
+### Status: ✅ No Leaks Detected
+
+Memory profiling verified with `dhat` heap profiler (December 2025):
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| Total allocated | 7.7 MB | Expected |
+| Peak usage (t-gmax) | 5,285 bytes | ✅ Minimal |
+| At exit (t-end) | 1,830 bytes | ✅ No leaks |
+| Allocation blocks | 51,800 | Properly freed |
+
+The 1,830 bytes at exit are expected static allocations:
+- Thread-local `HOT_CACHE` storage
+- Global allocator metadata
+- Static string literals
+
+### Running Memory Profiler
+
+```bash
+# With dhat (recommended)
+cargo run --example memory_profiler --features dhat-heap --release
+# View: https://nnethercote.github.io/dh_view/dh_view.html
+
+# With Valgrind (if installed)
+cargo build --example memory_profiler --profile profiling
+valgrind --leak-check=full ./target/profiling/examples/memory_profiler
+
+# With AddressSanitizer (nightly)
+RUSTFLAGS="-Z sanitizer=address" cargo +nightly run --example memory_profiler
+
+# With LeakSanitizer (nightly)
+RUSTFLAGS="-Z sanitizer=leak" cargo +nightly run --example memory_profiler
+```
+
+### Test Scenarios Covered
+
+- ✅ Singleton registration/resolution (500 iterations)
+- ✅ Lazy singleton initialization (500 iterations)
+- ✅ Transient service creation (5,000 iterations)
+- ✅ Scope creation/destruction (500 iterations)
+- ✅ Nested scopes (200 iterations, 3 levels deep)
+- ✅ Complex dependency graphs (500 iterations)
+- ✅ Container lifecycle (500 iterations)
+- ✅ Large allocations (300 iterations, 1KB+ each)
+- ✅ Access patterns (2,000 iterations)
+
+---
+
 *Last updated: December 2025*
 *Fuzzing: All targets passing (1M+ iterations)*
+*Memory: No leaks detected (dhat verified)*
 *See [CHANGELOG.md](CHANGELOG.md) for version history*

@@ -1,0 +1,88 @@
+---
+description: Testing conventions and requirements
+globs: ["**/*.rs", "**/tests/**"]
+alwaysApply: false
+---
+
+# Testing Guidelines
+
+## Test Framework
+
+- Use the built-in Rust test framework for unit/integration tests
+- Use **Vitest** for any TypeScript/JavaScript testing (docs site)
+- Use **Criterion** for benchmarks
+
+## Unit Tests
+
+Place unit tests in the same file as the code being tested:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_feature_name() {
+        // Arrange
+        let container = Container::new();
+
+        // Act
+        container.singleton(MyService);
+
+        // Assert
+        assert!(container.contains::<MyService>());
+    }
+}
+```
+
+## Integration Tests
+
+Place in `tests/` directory for cross-module testing.
+
+## Benchmarks
+
+Use Criterion in `benches/` directory:
+
+```rust
+use criterion::{criterion_group, criterion_main, Criterion};
+
+fn benchmark_name(c: &mut Criterion) {
+    c.bench_function("operation_name", |b| {
+        b.iter(|| {
+            // benchmarked code
+        })
+    });
+}
+
+criterion_group!(benches, benchmark_name);
+criterion_main!(benches);
+```
+
+## Running Tests
+
+```bash
+# All tests
+cargo test
+
+# With logging
+RUST_LOG=debug cargo test -- --nocapture
+
+# Specific test
+cargo test test_name
+
+# Benchmarks
+cargo bench
+```
+
+## Memory Profiling
+
+Use the memory profiler example for leak detection:
+
+```bash
+# With dhat
+cargo run --example memory_profiler --features dhat-heap
+
+# With Valgrind
+cargo build --example memory_profiler --profile profiling
+valgrind --leak-check=full ./target/profiling/examples/memory_profiler
+```

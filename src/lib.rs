@@ -106,6 +106,8 @@
 mod container;
 mod error;
 mod factory;
+#[cfg(feature = "ffi")]
+pub mod ffi;
 #[cfg(feature = "logging")]
 pub mod logging;
 mod provider;
