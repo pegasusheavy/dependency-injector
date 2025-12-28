@@ -12,14 +12,17 @@ This directory contains FFI (Foreign Function Interface) bindings that allow the
 ## Building the Shared Library
 
 ```bash
-# From the project root
-cargo build --release --features ffi
+# From the project root - build as cdylib for FFI
+cargo rustc --release --features ffi --crate-type cdylib
 
 # The shared library will be at:
 # Linux:   target/release/libdependency_injector.so
 # macOS:   target/release/libdependency_injector.dylib
 # Windows: target/release/dependency_injector.dll
 ```
+
+> **Note**: The `--crate-type cdylib` flag is required to build the shared library.
+> Without it, only the Rust static library (`.rlib`) is built.
 
 ## C/C++ Usage
 
@@ -58,9 +61,9 @@ gcc -o myapp myapp.c -L/path/to/target/release -ldependency_injector -I/path/to/
 
 ### Setup
 
-1. Build the Rust library:
+1. Build the Rust shared library:
    ```bash
-   cargo build --release --features ffi
+   cargo rustc --release --features ffi --crate-type cdylib
    ```
 
 2. Set the library path:
@@ -143,9 +146,9 @@ go run main.go
 
 ### Setup
 
-1. Build the Rust library:
+1. Build the Rust shared library:
    ```bash
-   cargo build --release --features ffi
+   cargo rustc --release --features ffi --crate-type cdylib
    ```
 
 2. Set the library path:
@@ -201,9 +204,9 @@ pnpm run example
 
 ### Setup
 
-1. Build the Rust library:
+1. Build the Rust shared library:
    ```bash
-   cargo build --release --features ffi
+   cargo rustc --release --features ffi --crate-type cdylib
    ```
 
 2. Set the library path:

@@ -377,8 +377,8 @@ The library provides C-compatible FFI bindings for use from other languages:
 ### Building FFI Library
 
 ```bash
-# Build the shared library
-cargo build --release --features ffi
+# Build the shared library (cdylib)
+cargo rustc --release --features ffi --crate-type cdylib
 
 # Output locations:
 # Linux:   target/release/libdependency_injector.so

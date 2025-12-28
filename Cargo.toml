@@ -11,8 +11,8 @@ readme = "README.md"
 repository = "https://github.com/pegasusheavy/dependency-injector"
 documentation = "https://docs.rs/dependency-injector"
 
-[lib]
-crate-type = ["rlib", "cdylib"]
+# Note: For FFI shared library builds, use:
+#   cargo rustc --release --features ffi --crate-type cdylib
 
 [features]
 default = ["logging"]
