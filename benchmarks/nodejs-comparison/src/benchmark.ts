@@ -1,6 +1,6 @@
 /**
  * Node.js DI Library Benchmark Comparison
- * 
+ *
  * Compares:
  * - Manual DI (baseline)
  * - Map-based DI (simple runtime)
@@ -141,14 +141,14 @@ function createAwilixContainer() {
   const container = createContainer<AwilixCradle>({
     injectionMode: InjectionMode.CLASSIC,
   });
-  
+
   container.register({
     config: asClass(Config).singleton(),
     database: asClass(Database).singleton(),
     userRepository: asClass(UserRepository).singleton(),
     userService: asClass(UserService).singleton(),
   });
-  
+
   return container;
 }
 
@@ -161,17 +161,17 @@ function benchmark(name: string, fn: () => void, iterations = 100000): { name: s
   for (let i = 0; i < 1000; i++) {
     fn();
   }
-  
+
   const start = process.hrtime.bigint();
   for (let i = 0; i < iterations; i++) {
     fn();
   }
   const end = process.hrtime.bigint();
-  
+
   const totalNs = Number(end - start);
   const avgNs = totalNs / iterations;
   const opsPerSec = 1e9 / avgNs;
-  
+
   return { name, opsPerSec, avgNs };
 }
 
@@ -188,97 +188,97 @@ async function runBenchmarks() {
   // ==========================================================================
   // Benchmark 1: Singleton Resolution
   // ==========================================================================
-  
+
   console.log('1. Singleton Resolution');
   console.log('-----------------------');
-  
+
   const manualContainer = new ManualContainer();
   const mapContainer = new MapContainer();
   mapContainer.register('config', new Config());
   const inversifyContainer = createInversifyContainer();
   const awilixContainer = createAwilixContainer();
-  
+
   // Warm up all containers
   manualContainer.getConfig();
   mapContainer.get<Config>('config');
   inversifyContainer.get(TYPES.Config);
   awilixContainer.resolve('config');
-  
+
   const singletonResults = [
     benchmark('manual_di', () => { manualContainer.getConfig(); }),
     benchmark('map_based', () => { mapContainer.get<Config>('config'); }),
     benchmark('inversify', () => { inversifyContainer.get(TYPES.Config); }),
     benchmark('awilix', () => { awilixContainer.resolve('config'); }),
   ];
-  
+
   console.table(singletonResults.map(r => ({
     Library: r.name,
     'ops/sec': Math.round(r.opsPerSec).toLocaleString(),
     'avg (ns)': r.avgNs.toFixed(2),
   })));
-  
+
   // ==========================================================================
   // Benchmark 2: Deep Dependency Chain
   // ==========================================================================
-  
+
   console.log('\n2. Deep Dependency Chain (4 levels)');
   console.log('------------------------------------');
-  
+
   const config = new Config();
   const db = new Database(config);
   const repo = new UserRepository(db);
   const svc = new UserService(repo);
   mapContainer.register('userService', svc);
-  
+
   // Warm up
   manualContainer.getUserService();
   mapContainer.get<UserService>('userService');
   inversifyContainer.get(TYPES.UserService);
   awilixContainer.resolve('userService');
-  
+
   const deepResults = [
     benchmark('manual_di', () => { manualContainer.getUserService(); }),
     benchmark('map_based', () => { mapContainer.get<UserService>('userService'); }),
     benchmark('inversify', () => { inversifyContainer.get(TYPES.UserService); }),
     benchmark('awilix', () => { awilixContainer.resolve('userService'); }),
   ];
-  
+
   console.table(deepResults.map(r => ({
     Library: r.name,
     'ops/sec': Math.round(r.opsPerSec).toLocaleString(),
     'avg (ns)': r.avgNs.toFixed(2),
   })));
-  
+
   // ==========================================================================
   // Benchmark 3: Container Creation
   // ==========================================================================
-  
+
   console.log('\n3. Container Creation');
   console.log('---------------------');
-  
+
   const creationResults = [
     benchmark('manual_di', () => { new ManualContainer(); }, 10000),
-    benchmark('map_based', () => { 
+    benchmark('map_based', () => {
       const c = new MapContainer();
       c.register('config', new Config());
     }, 10000),
     benchmark('inversify', () => { createInversifyContainer(); }, 1000),
     benchmark('awilix', () => { createAwilixContainer(); }, 1000),
   ];
-  
+
   console.table(creationResults.map(r => ({
     Library: r.name,
     'ops/sec': Math.round(r.opsPerSec).toLocaleString(),
     'avg (ns)': r.avgNs.toFixed(2),
   })));
-  
+
   // ==========================================================================
   // Benchmark 4: Mixed Workload (100 operations)
   // ==========================================================================
-  
+
   console.log('\n4. Mixed Workload (100 operations per iteration)');
   console.log('------------------------------------------------');
-  
+
   const mixedResults = [
     benchmark('manual_di', () => {
       for (let i = 0; i < 100; i++) {
@@ -331,21 +331,21 @@ async function runBenchmarks() {
       }
     }, 10000),
   ];
-  
+
   console.table(mixedResults.map(r => ({
     Library: r.name,
     'ops/sec': Math.round(r.opsPerSec).toLocaleString(),
     'avg (µs)': (r.avgNs / 1000).toFixed(2),
   })));
-  
+
   // ==========================================================================
   // Summary
   // ==========================================================================
-  
+
   console.log('\n============================');
   console.log('Summary');
   console.log('============================\n');
-  
+
   console.log('For comparison with Rust dependency-injector:');
   console.log('- Rust singleton resolution: ~17-32 ns');
   console.log('- Rust mixed workload (100 ops): ~2.2 µs');

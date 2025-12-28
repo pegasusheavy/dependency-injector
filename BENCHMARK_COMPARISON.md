@@ -1,6 +1,6 @@
 # Dependency Injector: Cross-Language Benchmark Comparison
 
-Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go and Node.js DI libraries.
+Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go, Node.js, and Python DI libraries.
 
 **Test Environment:**
 - CPU: Intel Core i9-13900K (32 threads)
@@ -195,31 +195,102 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 
 ---
 
-## Summary: Rust vs Go vs Node.js DI Performance
+## Python DI Libraries Compared
+
+| Library | Version | Type | Description |
+|---------|---------|------|-------------|
+| **Manual DI** | - | Baseline | Direct object instantiation |
+| **Dict-based** | - | Runtime | Python dict for storage |
+| **dependency-injector** | 4.48.3 | Runtime | Most popular Python DI (Cython-optimized) |
+| **injector** | 0.23.0 | Runtime | Google's Python DI |
+| **punq** | 0.7.0 | Runtime | Lightweight DI |
+
+---
+
+## Python Benchmark Results
+
+### 1. Singleton Resolution
+
+| Library | Language | Time (ns) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **17-32** | **1.0x** |
+| Python manual | Python | 56 | 1.8-3.3x |
+| Python dict | Python | 79 | 2.5-4.6x |
+| Python dependency-injector | Python | 95 | 3-5.6x |
+| Python punq | Python | 824 | 26-48x |
+| Python injector (Google) | Python | 3,319 | **104-195x** |
+
+### 2. Deep Dependency Chain (4 levels)
+
+| Library | Language | Time (ns) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **16-17** | **1.0x** |
+| Python manual | Python | 78 | 4.6-4.9x |
+| Python dependency-injector | Python | 127 | 7.5-7.9x |
+| Python dict | Python | 132 | 7.8-8.3x |
+| Python punq | Python | 885 | 52-55x |
+| Python injector (Google) | Python | 3,495 | **206-218x** |
+
+### 3. Container Creation
+
+| Library | Language | Time | vs Fastest |
+|---------|----------|------|------------|
+| Python dict | Python | 81 ns | 1.0x |
+| **Rust dependency-injector** | Rust | 434-740 ns | 5-9x |
+| Python manual | Python | 1,132 ns | 14x |
+| Python punq | Python | 36 µs | 444x |
+| Python injector (Google) | Python | 66 µs | 815x |
+| Python dependency-injector | Python | 601 µs | 7,420x |
+
+### 4. Mixed Workload (100 operations)
+
+| Library | Language | Time (µs) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **2.2** | **1.0x** |
+| Python manual | Python | 15.0 | 6.8x |
+| Python dependency-injector | Python | 15.7 | 7.1x |
+| Python dict | Python | 16.7 | 7.6x |
+| Python punq | Python | 90.4 | 41x |
+| Python injector (Google) | Python | 342.4 | **156x** |
+
+---
+
+## Summary: Rust vs Go vs Node.js vs Python DI Performance
 
 ### Speed Comparison
 
-| Operation | Go Best | Go Popular DI | Node.js Best | Node.js Popular DI | Rust dependency-injector |
-|-----------|---------|---------------|--------------|-------------------|--------------------------|
-| Singleton lookup | 15 ns | 767 ns | 136 ns | 1,829 ns | **17-32 ns** |
-| Dependency chain | 11 ns | 276 ns | 12 ns | 253 ns | **16-17 ns** |
-| Container creation | 0.3 ns | 27 µs | 877 ns | 139 µs | 434-740 ns |
-| Mixed workload (100 ops) | 7 µs | 125 µs | 6.6 µs | 15 µs | **2.2 µs** |
+| Operation | Go Best | Node.js Best | Python Best | Rust dependency-injector |
+|-----------|---------|--------------|-------------|--------------------------|
+| Singleton lookup | 15 ns | 136 ns | 56 ns | **17-32 ns** |
+| Dependency chain | 11 ns | 12 ns | 78 ns | **16-17 ns** |
+| Container creation | 0.3 ns | 877 ns | 81 ns | 434-740 ns |
+| Mixed workload (100 ops) | 7 µs | 6.6 µs | 15 µs | **2.2 µs** |
+
+### Popular DI Library Comparison
+
+| Operation | Go samber/do | Node.js inversify | Python dep-injector | Rust dependency-injector |
+|-----------|--------------|-------------------|---------------------|--------------------------|
+| Singleton lookup | 767 ns | 1,829 ns | 95 ns | **17-32 ns** |
+| Dependency chain | 276 ns | 253 ns | 127 ns | **16-17 ns** |
+| Container creation | 27 µs | 139 µs | 601 µs | 434-740 ns |
+| Mixed workload (100 ops) | 125 µs | 15 µs | 15.7 µs | **2.2 µs** |
 
 ### Feature Comparison
 
-| Feature | Go samber/do | Go uber/dig | Node.js inversify | Node.js awilix | Rust dependency-injector |
-|---------|--------------|-------------|-------------------|----------------|--------------------------|
-| Singleton | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Transient | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Scoped | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Lazy | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Factory | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Named Services | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Decorators | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Zero Allocations | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Hot Cache | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Compile-time Safety | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Feature | Go samber/do | Node.js inversify | Python dep-injector | Rust dependency-injector |
+|---------|--------------|-------------------|---------------------|--------------------------|
+| Singleton | ✅ | ✅ | ✅ | ✅ |
+| Transient | ✅ | ✅ | ✅ | ✅ |
+| Scoped | ✅ | ✅ | ✅ | ✅ |
+| Lazy | ✅ | ✅ | ✅ | ✅ |
+| Factory | ✅ | ✅ | ✅ | ✅ |
+| Named Services | ✅ | ✅ | ✅ | ❌ |
+| Decorators | ❌ | ✅ | ✅ | ❌ |
+| Async Support | ✅ | ✅ | ✅ | ✅ |
+| Zero Allocations | ❌ | ❌ | ❌ | ✅ |
+| Hot Cache | ❌ | ❌ | ❌ | ✅ |
+| Compile-time Safety | ❌ | ❌ | ❌ | ✅ |
+| Cython Optimized | ❌ | ❌ | ✅ | N/A |
 
 ---
 
@@ -236,20 +307,23 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 ### Performance Rankings
 
 **Singleton Resolution:**
-1. 🥇 **Rust dependency-injector** (17-32 ns)
-2. 🥈 Go sync.Map (15 ns)
-3. 🥉 Node.js manual (136 ns)
-4. Node.js awilix (176 ns)
-5. Go samber/do (767 ns)
-6. Node.js inversify (1,829 ns)
+1. 🥇 Go sync.Map (15 ns)
+2. 🥇 **Rust dependency-injector** (17-32 ns)
+3. 🥉 Python manual (56 ns)
+4. Python dependency-injector (95 ns)
+5. Node.js manual (136 ns)
+6. Go samber/do (767 ns)
+7. Node.js inversify (1,829 ns)
+8. Python injector (3,319 ns)
 
 **Mixed Workload (100 ops):**
 1. 🥇 **Rust dependency-injector** (2.2 µs)
 2. 🥈 Node.js Map (6.6 µs)
 3. 🥉 Go map+RWMutex (7 µs)
-4. Node.js manual (7.8 µs)
-5. Node.js inversify (15 µs)
+4. Python manual (15.0 µs)
+5. Python dependency-injector (15.7 µs)
 6. Go samber/do (125 µs)
+7. Python injector (342 µs)
 
 ### When to Use Each
 
@@ -268,6 +342,12 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 - **Manual/Map**: When you need maximum speed for simple use cases
 - **inversify**: When you need TypeScript decorators and enterprise patterns
 - **awilix**: When you need lightweight function-based DI
+
+#### Python DI Libraries
+- **Manual/Dict**: When you need maximum speed (~56ns)
+- **dependency-injector**: Best balance of features and performance (~95ns, Cython-optimized)
+- **punq**: Lightweight alternative with good performance (~824ns)
+- **injector (Google)**: When you need advanced features but can accept slower resolution
 
 ---
 
@@ -295,6 +375,16 @@ pnpm install
 pnpm bench
 ```
 
+### Python Benchmarks
+
+```bash
+cd benchmarks/python-comparison
+python -m venv .venv
+source .venv/bin/activate
+pip install dependency-injector injector punq
+python benchmark.py
+```
+
 ---
 
-*Benchmarks run on Intel i9-13900K, Linux, Node.js v22.13.1, Go 1.24, Rust 1.85, December 2025*
+*Benchmarks run on Intel i9-13900K, Linux, Python 3.13.3, Node.js v22.13.1, Go 1.24, Rust 1.85, December 2025*
