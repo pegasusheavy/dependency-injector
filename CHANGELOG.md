@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-12-28
+
+### Highlights
+- **FFI Bindings** - Use dependency-injector from Go, Python, Node.js, and C#
+- **Cross-Language Benchmarks** - Comprehensive comparison against 5 languages
+- **Memory Verified** - Zero leaks confirmed by both dhat and Valgrind
+
+### Added
+- **FFI Support** - C-compatible bindings for cross-language integration
+  - Go package with CGO bindings (`ffi/go/`)
+  - Python package with ctypes (`ffi/python/`)
+  - Node.js package with ffi-napi (`ffi/nodejs/`)
+  - C# library with P/Invoke (`ffi/csharp/`)
+  - C header file (`ffi/dependency_injector.h`)
+- **Memory Profiling** - `memory_profiler` example with dhat integration
+- **Cursor Agents** - AI-assisted development workflows
+  - `rust-di-expert` - DI pattern guidance
+  - `performance-optimizer` - Benchmark analysis
+  - `docs-writer` - Documentation generation
+  - `test-engineer` - Test coverage
+  - `release-manager` - Publishing workflow
+
+### Benchmarks
+Cross-language comparison results:
+
+| Language | Library | Singleton | Mixed Workload |
+|----------|---------|-----------|----------------|
+| **Rust** | dependency-injector | **17-32 ns** | **2.2 µs** |
+| Go | samber/do | 767 ns | 125 µs |
+| C# | MS.Extensions.DI | 208 ns | 31 µs |
+| Python | dependency-injector | 95 ns | 15.7 µs |
+| Node.js | inversify | 1,829 ns | 15 µs |
+
+Rust DI comparison:
+
+| Library | Singleton | Mixed Workload |
+|---------|-----------|----------------|
+| **dependency-injector** | **17-27 ns** | **2.2 µs** |
+| shaku | 17-21 ns | 2.5-15 µs |
+| ferrous-di | 57-70 ns | 7.6-11 µs |
+
+### Memory Profiling
+Verified with dhat and Valgrind:
+- **Definitely lost: 0 bytes**
+- **Indirectly lost: 0 bytes**
+- **Possibly lost: 0 bytes**
+- Total allocations: 51,808, properly freed: 51,804 (99.99%)
+
+### Documentation
+- Updated website with FFI section and cross-language benchmarks
+- Added `BENCHMARK_COMPARISON.md` for 5-language comparison
+- Added `RUST_DI_COMPARISON.md` for Rust ecosystem comparison
+- Updated README with FFI examples and performance rankings
+
 ## [0.2.1] - 2025-12-21
 
 ### Highlights
@@ -158,6 +212,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scoped containers with parent resolution
 - Lock-free concurrent access via DashMap
 
+[0.2.2]: https://github.com/pegasusheavy/dependency-injector/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/pegasusheavy/dependency-injector/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.12...v0.2.0
 [0.1.12]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.11...v0.1.12
