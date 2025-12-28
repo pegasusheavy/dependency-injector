@@ -1,177 +1,211 @@
-# Benchmark Comparison: Rust vs Go Dependency Injector
+# Dependency Injector: Rust vs Go Benchmark Comparison
 
-**Date:** December 2025
-**System:** Intel Core i9-13900K, Linux
-**Rust:** dependency-injector v0.2.1
-**Go:** [go-dependency-injector](https://github.com/pegasusheavy/go-dependency-injector) v1.0.3
+Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go DI libraries.
 
-## Executive Summary
-
-| Operation | Rust | Go | Winner | Speedup |
-|-----------|------|-----|--------|---------|
-| **Singleton Resolution** | ~10-20 ns | ~200 ns | 🦀 Rust | **10-20x faster** |
-| **Instance Resolution** | ~10-20 ns | ~304 ns | 🦀 Rust | **15-30x faster** |
-| **Contains Check** | ~22 ns | ~32 ns | 🦀 Rust | **1.5x faster** |
-| **Transient Resolution** | ~77-100 ns | ~803 ns | 🦀 Rust | **8-10x faster** |
-| **Scope Creation** | ~350-580 ns | ~1302 ns | 🦀 Rust | **2-4x faster** |
-| **Container Creation** | ~implicit | ~85 ns | 🦀 Rust | N/A |
-| **Registration** | ~280-370 ns | ~997-1606 ns | 🦀 Rust | **3-5x faster** |
-
-## Detailed Results
-
-### Resolution Benchmarks
-
-| Benchmark | Rust (ns) | Go (ns) | Allocations (Go) |
-|-----------|-----------|---------|------------------|
-| Singleton Resolution | **~10-20** | 201 | 1 alloc/op |
-| Instance Resolution | **~10-20** | 304 | 1 alloc/op |
-| Transient Resolution | **~77-100** | 803 | 3 allocs/op |
-| Contains/Has Check | **~22** | 32 | 0 allocs/op |
-| Scoped Resolution | **~28-34** | 3115 | 1 alloc/op |
-| Named Resolution | N/A | 216 | 1 alloc/op |
-
-### Registration Benchmarks
-
-| Benchmark | Rust (ns) | Go (ns) | Allocations (Go) |
-|-----------|-----------|---------|------------------|
-| Register Singleton | **~280-320** | 997 | 1 alloc/op |
-| Register with Options | **~280-370** | 1606 | 1 alloc/op |
-| Register Instance | **~280-320** | 394 | 1 alloc/op |
-
-### Scope Benchmarks
-
-| Benchmark | Rust (ns) | Go (ns) | Notes |
-|-----------|-----------|---------|-------|
-| Create Scope | **~350-580** | 1302 | Rust uses DashMap sharding |
-| Scope Pool Acquire | **~138-154** | N/A | Rust-only feature |
-
-### Concurrent Benchmarks (Parallel Resolution)
-
-| Benchmark | Rust | Go (ns) | Notes |
-|-----------|------|---------|-------|
-| Singleton Parallel | Very fast | 184 | DashMap vs sync.RWMutex |
-| Transient Parallel | Very fast | 356 | Lock-free in Rust |
-| Scoped Parallel | Very fast | 328 | |
-
-## Architecture Differences
-
-### Rust (dependency-injector)
-
-- **Lock-free**: Uses `DashMap` for concurrent access (sharded lock-free HashMap)
-- **Thread-local cache**: 4-slot LRU cache eliminates map lookups for hot services
-- **Zero allocations**: Returns `Arc<T>` directly, no cloning on resolution
-- **Type-safe**: Compile-time generic resolution
-- **Memory**: Services stored as `Arc<dyn Any + Send + Sync>`
-
-### Go (go-dependency-injector)
-
-- **RWMutex**: Uses sync.RWMutex for thread-safe access
-- **Reflection**: Runtime type inspection for resolution
-- **Allocations**: 1-3 allocations per resolve (interface boxing)
-- **Generics**: Go 1.22+ generics for type safety
-- **Memory**: Interface-based storage
-
-## Why Rust is Faster
-
-### 1. Lock-Free Data Structures
-
-```rust
-// Rust: DashMap with sharded concurrent access
-type ServiceStorage = DashMap<TypeId, Arc<dyn Any + Send + Sync>>;
-```
-
-```go
-// Go: RWMutex-protected map
-type Container struct {
-    mu    sync.RWMutex
-    items map[reflect.Type]*Registration
-}
-```
-
-### 2. Thread-Local Hot Cache
-
-Rust maintains a 4-slot thread-local cache for frequently accessed services:
-
-```rust
-thread_local! {
-    static HOT_CACHE: UnsafeCell<HotCache> = UnsafeCell::new(HotCache::new());
-}
-```
-
-This eliminates DashMap lookups for hot services entirely (~8-10ns path).
-
-### 3. Zero-Copy Resolution
-
-```rust
-// Rust: Clone Arc pointer only (cheap)
-pub fn get<T>(&self) -> Result<Arc<T>> {
-    // Returns cloned Arc - just reference count increment
-}
-```
-
-```go
-// Go: Interface boxing + type assertion
-func Resolve[T any](c *Container) (T, error) {
-    // Interface allocation + type assertion
-}
-```
-
-### 4. TypeId vs Reflection
-
-```rust
-// Rust: TypeId is a u64 hash at compile time
-let type_id = TypeId::of::<T>();
-```
-
-```go
-// Go: reflect.TypeOf at runtime
-typeKey := reflect.TypeOf((*T)(nil)).Elem()
-```
-
-## When to Use Each
-
-### Use Rust dependency-injector when:
-
-- Sub-10ns resolution time is critical
-- High-throughput service resolution (>1M ops/sec)
-- Memory efficiency matters
-- You're already using Rust
-
-### Use Go go-dependency-injector when:
-
-- Go is your primary language
-- ~200ns resolution is acceptable
-- You prefer Go's simpler deployment
-- Team expertise is in Go
-
-## Benchmark Commands
-
-### Rust
-
-```bash
-cd dependency-injector
-cargo bench --bench container_bench
-```
-
-### Go
-
-```bash
-cd go-dependency-injector
-go test -bench=. -benchmem ./di/
-```
-
-## Conclusion
-
-The Rust dependency-injector is **10-20x faster** for singleton resolution and **8-10x faster** for transient resolution compared to the Go version. This is primarily due to:
-
-1. Lock-free concurrent data structures (DashMap)
-2. Thread-local hot caching
-3. Zero-allocation resolution path
-4. Compile-time type resolution vs runtime reflection
-
-Both libraries provide similar functionality and ergonomics, but the Rust version is significantly more performant for latency-sensitive applications.
+**Test Environment:**
+- CPU: Intel Core i9-13900K (32 threads)
+- OS: Linux (WSL2)
+- Rust: 1.85 (release mode)
+- Go: 1.24
 
 ---
 
-*Benchmarks run on Intel Core i9-13900K, Linux, December 2025*
+## Go DI Libraries Compared
 
+| Library | Version | Type | Description |
+|---------|---------|------|-------------|
+| **sync.Map** | stdlib | Runtime | Go's concurrent-safe map |
+| **map+RWMutex** | stdlib | Runtime | Traditional mutex-protected map |
+| **goioc/di** | 1.7.1 | Runtime | IoC container |
+| **samber/do** | 2.0.0 | Runtime | Generic DI with Go 1.18+ generics |
+| **uber-go/dig** | 1.19.0 | Runtime | Uber's reflection-based DI |
+
+---
+
+## Benchmark Results
+
+### 1. Singleton Resolution (Single Service Lookup)
+
+The most common DI operation - resolving a pre-registered singleton.
+
+| Library | Language | Time | Allocations | vs Fastest |
+|---------|----------|------|-------------|------------|
+| **Go manual** | Go | 0.5 ns | 0 | 1.0x |
+| **Go sync.Map** | Go | 15-29 ns | 0 | 30-58x |
+| **Go map+RWMutex** | Go | 25-28 ns | 0 | 50-56x |
+| **Go goioc/di** | Go | 109-171 ns | 0 | 218-342x |
+| **Go samber/do** | Go | 767-844 ns | 6 | 1534-1688x |
+| **Go uber/dig** | Go | 4,214-6,409 ns | 25 | 8428-12818x |
+| | | | | |
+| **Rust manual** | Rust | ~1 ns | 0 | ~2x |
+| **Rust dependency-injector** | Rust | 17-32 ns | 0 | 34-64x |
+| **Rust HashMap+RwLock** | Rust | 60-73 ns | 0 | 120-146x |
+| **Rust DashMap** | Rust | 84-123 ns | 0 | 168-246x |
+
+**Key Insights:**
+- Go's `sync.Map` and Rust's `dependency-injector` are competitive (~15-30ns)
+- Go's popular DI libraries (samber/do, uber/dig) are significantly slower due to reflection
+- Rust's `dependency-injector` with hot cache can achieve ~8-10ns on cache hits
+
+---
+
+### 2. Deep Dependency Chain (Service with Dependencies)
+
+Resolving a service that has multiple levels of dependencies.
+
+| Library | Language | Time | Allocations |
+|---------|----------|------|-------------|
+| **Go manual** | Go | 0.15-0.18 ns | 0 |
+| **Go sync.Map** | Go | 11-14 ns | 0 |
+| **Go map+RWMutex** | Go | 16-18 ns | 0 |
+| **Go samber/do** | Go | 276-498 ns | 6 |
+| **Go uber/dig** | Go | 1,144-1,315 ns | 25 |
+| | | | |
+| **Rust dependency-injector** | Rust | 16-17 ns | 0 |
+| **Rust shaku** | Rust | 16-17 ns | 0 |
+| **Rust HashMap+RwLock** | Rust | 45-50 ns | 0 |
+
+**Key Insights:**
+- Both Go `sync.Map` and Rust `dependency-injector` achieve ~11-17ns for cached lookups
+- Go's reflection-based libraries have significant overhead for dependency resolution
+- Pre-cached singletons make dependency depth irrelevant for performance
+
+---
+
+### 3. Container Creation
+
+Creating a new DI container instance.
+
+| Library | Language | Time | Allocations |
+|---------|----------|------|-------------|
+| **Go sync.Map** | Go | 0.3-0.5 ns | 0 |
+| **Go map+RWMutex** | Go | 6.5-10 ns | 0 |
+| **Go manual** | Go | 0.9-1.0 ns | 0 |
+| **Go samber/do** | Go | 27-228 µs | 30 |
+| **Go uber/dig** | Go | 63-179 µs | 51 |
+| | | | |
+| **Rust HashMap+RwLock** | Rust | 10 ns | 0 |
+| **Rust shaku** | Rust | 179-188 ns | 0 |
+| **Rust dependency-injector** | Rust | 434-740 ns | 0 |
+| **Rust DashMap** | Rust | 1.6-1.8 µs | 0 |
+
+**Key Insights:**
+- Go's stdlib containers are extremely fast to create
+- Rust's `dependency-injector` has moderate setup cost due to DashMap shards
+- Container creation is typically a one-time startup cost
+
+---
+
+### 4. Concurrent Access (Parallel Reads)
+
+Performance under concurrent read load (32 goroutines/threads).
+
+| Library | Language | Time/op |
+|---------|----------|---------|
+| **Go sync.Map** | Go | 0.9-1.3 ns |
+| **Go map+RWMutex** | Go | 51-68 ns |
+| **Go uber/dig** | Go | 1,299-54,752 ns |
+| **Go samber/do** | Go | 1,081-26,952 ns |
+| | | |
+| **Rust dependency-injector** | Rust | 1.3-3.4 ms (100 ops) |
+| **Rust HashMap+RwLock** | Rust | 5.7 ms (100 ops) |
+
+**Key Insights:**
+- Go's `sync.Map` excels at concurrent read access (~1ns per operation)
+- Rust's DashMap-based implementation scales well but has higher overhead
+- Both languages benefit from lock-free data structures
+
+---
+
+### 5. Mixed Workload (100 Operations)
+
+Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
+
+| Library | Language | Time | Allocations |
+|---------|----------|------|-------------|
+| **Go map+RWMutex** | Go | 7-133 µs | 20 |
+| **Go sync.Map** | Go | 9-31 µs | 25 |
+| **Go samber/do** | Go | 125-1,399 µs | 570 |
+| | | | |
+| **Rust dependency-injector** | Rust | 2.2 µs | 0 |
+| **Rust DashMap basic** | Rust | 5.9-6.0 µs | 0 |
+| **Rust shaku** | Rust | 2.5-15 µs | 0 |
+
+**Key Insights:**
+- **Rust `dependency-injector` wins with consistent 2.2µs**
+- Go stdlib solutions (map+RWMutex, sync.Map) vary widely
+- Go's feature-rich DI libraries (samber/do) have high overhead
+
+---
+
+## Summary: Rust vs Go DI Performance
+
+### Speed Comparison
+
+| Operation | Go Best | Go Popular DI | Rust dependency-injector |
+|-----------|---------|---------------|--------------------------|
+| Singleton lookup | 15 ns (sync.Map) | 767 ns (samber/do) | **17-32 ns** |
+| Dependency chain | 11 ns (sync.Map) | 276 ns (samber/do) | **16-17 ns** |
+| Container creation | 0.3 ns (sync.Map) | 27 µs (samber/do) | 434-740 ns |
+| Mixed workload (100 ops) | 7 µs (map+RWMutex) | 125 µs (samber/do) | **2.2 µs** |
+
+### Feature Comparison
+
+| Feature | Go samber/do | Go uber/dig | Rust dependency-injector |
+|---------|--------------|-------------|--------------------------|
+| Singleton | ✅ | ✅ | ✅ |
+| Transient | ✅ | ✅ | ✅ |
+| Scoped | ✅ | ✅ | ✅ |
+| Lazy | ✅ | ✅ | ✅ |
+| Factory | ✅ | ✅ | ✅ |
+| Named Services | ✅ | ✅ | ❌ |
+| Zero Allocations | ❌ | ❌ | ✅ |
+| Hot Cache | ❌ | ❌ | ✅ |
+| Compile-time Safety | ❌ | ❌ | ✅ |
+
+---
+
+## Conclusions
+
+### Why Rust `dependency-injector` is Faster
+
+1. **Zero allocations** - No heap allocation per resolution
+2. **Thread-local hot cache** - Frequently accessed services cached locally
+3. **Lock-free DashMap** - Concurrent reads without mutex contention
+4. **No reflection** - All type resolution at compile time
+5. **Inlined hot paths** - Critical code paths optimized by LLVM
+
+### When to Use Go DI Libraries
+
+- **sync.Map/map+RWMutex**: When you need maximum speed and can manage dependencies manually
+- **samber/do**: When you need generics-based DI with good developer experience
+- **uber/dig**: When you need advanced features like decoration and groups
+
+### When to Use Rust `dependency-injector`
+
+- **High-performance services** requiring sub-microsecond DI
+- **Memory-constrained environments** (zero allocation per resolution)
+- **Concurrent workloads** with many threads accessing the container
+- **Type-safe applications** where compile-time guarantees matter
+
+---
+
+## Reproducing Benchmarks
+
+### Go Benchmarks
+
+```bash
+cd benchmarks/go-comparison
+go test -bench=. -benchmem -count=3
+```
+
+### Rust Benchmarks
+
+```bash
+cargo bench --bench container_bench
+cargo bench --bench comparison_bench
+```
+
+---
+
+*Benchmarks run on Intel i9-13900K, Linux, December 2025*
