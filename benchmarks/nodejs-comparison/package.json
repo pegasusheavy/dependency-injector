@@ -1,0 +1,25 @@
+{
+  "name": "nodejs-comparison",
+  "version": "1.0.0",
+  "description": "Node.js DI library benchmark comparison",
+  "type": "module",
+  "scripts": {
+    "bench": "tsx src/benchmark.ts",
+    "build": "tsc"
+  },
+  "keywords": ["benchmark", "di", "dependency-injection"],
+  "author": "Pegasus Heavy Industries",
+  "license": "MIT",
+  "packageManager": "pnpm@10.26.2",
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "awilix": "^12.0.5",
+    "inversify": "^7.10.8",
+    "reflect-metadata": "^0.2.2",
+    "tinybench": "^6.0.0",
+    "tsx": "^4.21.0",
+    "tsyringe": "^4.10.0",
+    "typedi": "^0.10.0",
+    "typescript": "^5.9.3"
+  }
+}

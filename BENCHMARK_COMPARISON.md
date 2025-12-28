@@ -1,6 +1,6 @@
-# Dependency Injector: Rust vs Go Benchmark Comparison
+# Dependency Injector: Cross-Language Benchmark Comparison
 
-Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go DI libraries.
+Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go and Node.js DI libraries.
 
 **Test Environment:**
 - CPU: Intel Core i9-13900K (32 threads)
@@ -138,30 +138,88 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 
 ---
 
-## Summary: Rust vs Go DI Performance
+---
+
+## Node.js DI Libraries Compared
+
+| Library | Version | Type | Description |
+|---------|---------|------|-------------|
+| **Manual DI** | - | Baseline | Direct object instantiation |
+| **Map-based** | - | Runtime | JavaScript Map for storage |
+| **inversify** | 7.10.8 | Runtime | Popular TypeScript DI with decorators |
+| **awilix** | 12.0.5 | Runtime | Lightweight function-based DI |
+
+---
+
+## Node.js Benchmark Results
+
+### 1. Singleton Resolution
+
+| Library | Language | Time (ns) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **17-32** | **1.0x** |
+| Node.js manual | Node.js | 136 | 4-8x |
+| Node.js awilix | Node.js | 176 | 5-10x |
+| Node.js Map | Node.js | 271 | 8-16x |
+| Node.js inversify | Node.js | 1,829 | 57-107x |
+
+### 2. Deep Dependency Chain (4 levels)
+
+| Library | Language | Time (ns) | vs Fastest |
+|---------|----------|-----------|------------|
+| Node.js Map | Node.js | 12 | 1.0x |
+| **Rust dependency-injector** | Rust | **16-17** | 1.3-1.4x |
+| Node.js manual | Node.js | 53 | 4.4x |
+| Node.js inversify | Node.js | 253 | 21x |
+| Node.js awilix | Node.js | 285 | 24x |
+
+### 3. Container Creation
+
+| Library | Language | Time | vs Fastest |
+|---------|----------|------|------------|
+| **Rust dependency-injector** | Rust | 434-740 ns | 1.0x |
+| Node.js Map | Node.js | 877 ns | 1.2-2.0x |
+| Node.js manual | Node.js | 1,901 ns | 2.6-4.4x |
+| Node.js awilix | Node.js | 139 µs | 188-320x |
+| Node.js inversify | Node.js | 286 µs | 386-658x |
+
+### 4. Mixed Workload (100 operations)
+
+| Library | Language | Time (µs) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **2.2** | **1.0x** |
+| Node.js Map | Node.js | 6.6 | 3.0x |
+| Node.js manual | Node.js | 7.8 | 3.5x |
+| Node.js inversify | Node.js | 15.5 | 7.0x |
+| Node.js awilix | Node.js | 825 | 375x |
+
+---
+
+## Summary: Rust vs Go vs Node.js DI Performance
 
 ### Speed Comparison
 
-| Operation | Go Best | Go Popular DI | Rust dependency-injector |
-|-----------|---------|---------------|--------------------------|
-| Singleton lookup | 15 ns (sync.Map) | 767 ns (samber/do) | **17-32 ns** |
-| Dependency chain | 11 ns (sync.Map) | 276 ns (samber/do) | **16-17 ns** |
-| Container creation | 0.3 ns (sync.Map) | 27 µs (samber/do) | 434-740 ns |
-| Mixed workload (100 ops) | 7 µs (map+RWMutex) | 125 µs (samber/do) | **2.2 µs** |
+| Operation | Go Best | Go Popular DI | Node.js Best | Node.js Popular DI | Rust dependency-injector |
+|-----------|---------|---------------|--------------|-------------------|--------------------------|
+| Singleton lookup | 15 ns | 767 ns | 136 ns | 1,829 ns | **17-32 ns** |
+| Dependency chain | 11 ns | 276 ns | 12 ns | 253 ns | **16-17 ns** |
+| Container creation | 0.3 ns | 27 µs | 877 ns | 139 µs | 434-740 ns |
+| Mixed workload (100 ops) | 7 µs | 125 µs | 6.6 µs | 15 µs | **2.2 µs** |
 
 ### Feature Comparison
 
-| Feature | Go samber/do | Go uber/dig | Rust dependency-injector |
-|---------|--------------|-------------|--------------------------|
-| Singleton | ✅ | ✅ | ✅ |
-| Transient | ✅ | ✅ | ✅ |
-| Scoped | ✅ | ✅ | ✅ |
-| Lazy | ✅ | ✅ | ✅ |
-| Factory | ✅ | ✅ | ✅ |
-| Named Services | ✅ | ✅ | ❌ |
-| Zero Allocations | ❌ | ❌ | ✅ |
-| Hot Cache | ❌ | ❌ | ✅ |
-| Compile-time Safety | ❌ | ❌ | ✅ |
+| Feature | Go samber/do | Go uber/dig | Node.js inversify | Node.js awilix | Rust dependency-injector |
+|---------|--------------|-------------|-------------------|----------------|--------------------------|
+| Singleton | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Transient | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Scoped | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Lazy | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Factory | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Named Services | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Decorators | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Zero Allocations | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Hot Cache | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Compile-time Safety | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -175,29 +233,45 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 4. **No reflection** - All type resolution at compile time
 5. **Inlined hot paths** - Critical code paths optimized by LLVM
 
-### When to Use Go DI Libraries
+### Performance Rankings
 
-- **sync.Map/map+RWMutex**: When you need maximum speed and can manage dependencies manually
-- **samber/do**: When you need generics-based DI with good developer experience
-- **uber/dig**: When you need advanced features like decoration and groups
+**Singleton Resolution:**
+1. 🥇 **Rust dependency-injector** (17-32 ns)
+2. 🥈 Go sync.Map (15 ns)
+3. 🥉 Node.js manual (136 ns)
+4. Node.js awilix (176 ns)
+5. Go samber/do (767 ns)
+6. Node.js inversify (1,829 ns)
 
-### When to Use Rust `dependency-injector`
+**Mixed Workload (100 ops):**
+1. 🥇 **Rust dependency-injector** (2.2 µs)
+2. 🥈 Node.js Map (6.6 µs)
+3. 🥉 Go map+RWMutex (7 µs)
+4. Node.js manual (7.8 µs)
+5. Node.js inversify (15 µs)
+6. Go samber/do (125 µs)
 
+### When to Use Each
+
+#### Rust `dependency-injector`
 - **High-performance services** requiring sub-microsecond DI
 - **Memory-constrained environments** (zero allocation per resolution)
 - **Concurrent workloads** with many threads accessing the container
 - **Type-safe applications** where compile-time guarantees matter
 
+#### Go DI Libraries
+- **sync.Map/map+RWMutex**: When you need maximum speed
+- **samber/do**: When you need generics-based DI with good developer experience
+- **uber/dig**: When you need advanced features like decoration and groups
+
+#### Node.js DI Libraries
+- **Manual/Map**: When you need maximum speed for simple use cases
+- **inversify**: When you need TypeScript decorators and enterprise patterns
+- **awilix**: When you need lightweight function-based DI
+
 ---
 
 ## Reproducing Benchmarks
-
-### Go Benchmarks
-
-```bash
-cd benchmarks/go-comparison
-go test -bench=. -benchmem -count=3
-```
 
 ### Rust Benchmarks
 
@@ -206,6 +280,21 @@ cargo bench --bench container_bench
 cargo bench --bench comparison_bench
 ```
 
+### Go Benchmarks
+
+```bash
+cd benchmarks/go-comparison
+go test -bench=. -benchmem -count=3
+```
+
+### Node.js Benchmarks
+
+```bash
+cd benchmarks/nodejs-comparison
+pnpm install
+pnpm bench
+```
+
 ---
 
-*Benchmarks run on Intel i9-13900K, Linux, December 2025*
+*Benchmarks run on Intel i9-13900K, Linux, Node.js v22.13.1, Go 1.24, Rust 1.85, December 2025*
