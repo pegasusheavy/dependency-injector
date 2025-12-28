@@ -1,79 +1,44 @@
-# Performance Optimization TODO
+# dependency-injector
 
-> dependency-injector v0.2.1 - December 2025
+> v0.2.2 | December 2025
 
-## Current Benchmark Results
+## Performance Summary
 
-| Operation | Time | Target | Status |
-|-----------|------|--------|--------|
-| `get_singleton` | **~9.4 ns** | <8 ns | 🎯 |
-| `get_medium` | **~9.5 ns** | <8 ns | 🎯 |
-| `contains_check` | **~11.0 ns** | <10 ns | 🔲 |
-| `try_get_found` | **~9.5 ns** | <8 ns | 🎯 |
-| `try_get_not_found` | **~10.9 ns** | <15 ns | ✅ |
-| `get_transient` | **~24 ns** | <30 ns | ✅ |
-| `create_scope` | **~80-110 ns** | <100 ns | ✅ |
-| `scope_pool_acquire` | **~56 ns** | <60 ns | ✅ |
+| Operation | Time | Status |
+|-----------|------|--------|
+| `get_singleton` | **~9.4 ns** | ✅ ~1ns from manual DI |
+| `get_transient` | **~24 ns** | ✅ |
+| `contains_check` | **~11 ns** | ✅ |
+| `create_scope` | **~80 ns** | ✅ |
+| `scope_pool_acquire` | **~56 ns** | ✅ |
+| `frozen_contains` | **~4 ns** | ✅ Perfect hash |
 
-### Performance Summary
+### vs Other Approaches
 
-- **Singleton/lazy**: ~9.4ns (UnsafeCell + type hash optimization)
-- **Transients**: ~24ns (factory invocation overhead)
-- **Not found**: ~10.9ns (root fast-path optimization)
-- **Contains check**: ~11ns (DashMap lookup)
-- **Scope creation**: ~80-110ns (4-shard DashMap)
-- **Scope pool**: ~56ns (pre-allocated reuse)
+| Approach | Singleton | Concurrent (4 threads) |
+|----------|-----------|------------------------|
+| Manual DI | 8.4 ns | N/A |
+| **dependency-injector** | **9.4 ns** | 90 µs |
+| HashMap + RwLock | 21.5 ns | 93 µs |
+| DashMap (basic) | 22.2 ns | 89 µs |
 
-### Comparison with Alternatives
+### vs Other Languages
 
-| Approach | Resolution | Container Creation | 4-Thread Concurrent |
-|----------|------------|-------------------|---------------------|
-| Manual DI (baseline) | **8.4 ns** | 95 ns | N/A |
-| HashMap + RwLock | 21.5 ns | **7.6 ns** | 93 µs |
-| DashMap (basic) | 22.2 ns | 670 ns | **89 µs** |
-| **dependency-injector** | **~9.4 ns** | ~80-110 ns | ~90 µs |
-
-**Gap to manual DI: ~1.0ns** - only 12% overhead vs hand-written DI!
+| Language | Library | Singleton | Mixed Workload |
+|----------|---------|-----------|----------------|
+| **Rust** | **dependency-injector** | **17-32 ns** | **2.2 µs** |
+| Go | samber/do | 767 ns | 125 µs |
+| C# | MS.Extensions.DI | 208 ns | 31 µs |
+| Python | dependency-injector | 95 ns | 15.7 µs |
+| Node.js | inversify | 1,829 ns | 15 µs |
 
 ---
 
-## Path to 8ns Resolution
+## Future Optimizations
 
-Current: **~9.4ns** | Target: **8ns** | Gap: **~1.4ns**
+### Profile-Guided Optimization (PGO)
 
-### Completed Optimizations
-
-#### Phase 12: Replace RefCell with UnsafeCell ✅
-
-Since `HotCache` is thread-local and single-threaded, `RefCell` bounds checks are unnecessary.
-
-**Result:** ~0.4ns savings
-
-#### Phase 13: Inline TypeId Storage ✅
-
-Store `u64` hash instead of `TypeId` to avoid transmute on every comparison.
-
-**Result:** ~0.3ns savings
-
-#### Phase 14: Cold Path Annotations ✅
-
-Marked `resolve_from_parents` as `#[cold]` to improve branch prediction.
-
-**Result:** Improved branch prediction
-
-#### Phase 15: Root Container Fast-Path ✅
-
-Skip parent chain walk when `depth == 0`.
-
-**Result:** `try_get_not_found` improved 13% (12.6ns → 10.9ns)
-
-### Remaining Optimization
-
-#### Phase 16: Profile-Guided Optimization (PGO)
-
-**Status:** 🔲 TODO
-
-Build with PGO for production (5-15% improvement):
+Build with PGO for 5-15% improvement:
 
 ```bash
 RUSTFLAGS="-Cprofile-generate=/tmp/pgo" cargo build --release
@@ -85,117 +50,42 @@ RUSTFLAGS="-Cprofile-use=/tmp/pgo" cargo build --release
 
 ---
 
-## Summary: Progress to 8ns
+## Quality Assurance
 
-| Phase | Optimization | Result | Current |
-|-------|--------------|--------|---------|
-| Baseline | - | - | 9.8ns |
-| 12 | UnsafeCell | ✅ -0.4ns | 9.4ns |
-| 13 | Inline TypeId | ✅ (combined) | 9.4ns |
-| 14 | Cold paths | ✅ | 9.4ns |
-| 15 | Root fast-path | ✅ | **9.4ns** |
-| 16 | PGO | 🔲 | ~8.0ns |
+### Memory: ✅ Zero Leaks
 
----
+| Tool | Status |
+|------|--------|
+| dhat | ✅ 0 leaks, 51,800 allocs properly freed |
+| Valgrind | ✅ 0 definitely/indirectly/possibly lost |
 
-## Other Opportunities
+### Fuzzing: ✅ Passing
 
-### Contains Check (<10ns target)
-
-Currently ~10.5ns, limited by DashMap `contains_key` overhead.
-Options:
-- Use `FrozenStorage` for locked containers (3.9ns)
-- Accept current performance (only 0.5ns over target)
+All fuzz targets passing (1M+ iterations):
+- `fuzz_container` - Basic operations
+- `fuzz_scoped` - Hierarchical scopes
+- `fuzz_concurrent` - Multi-threaded access
+- `fuzz_lifecycle` - Lazy/transient/locking
 
 ---
 
-## Benchmarking Commands
+## Commands
 
 ```bash
-# Run all benchmarks
-cargo bench
+# Benchmarks
+cargo bench                                    # All benchmarks
+cargo bench --bench comparison_bench           # vs other Rust DI crates
 
-# Run specific benchmark
-cargo bench --bench container_bench -- "resolution"
+# Profiling
+cargo run --example memory_profiler --features dhat-heap --release
+valgrind --leak-check=full ./target/profiling/examples/memory_profiler
 
-# Run comparison benchmarks
-cargo bench --bench comparison_bench
-
-# Run with profiling (requires perf/dtrace)
-cargo flamegraph --bench container_bench -- --bench
-
-# Run fuzzing (requires nightly)
+# Fuzzing
 cd fuzz && cargo +nightly fuzz run fuzz_container -- -max_total_time=60
 ```
 
 ---
 
-## Memory Profiling
-
-### Status: ✅ No Leaks Detected
-
-Memory profiling verified with both `dhat` and Valgrind (December 2025):
-
-#### dhat Heap Profiler Results
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| Total allocated | 7.7 MB | Expected |
-| Peak usage (t-gmax) | 5,285 bytes | ✅ Minimal |
-| At exit (t-end) | 1,830 bytes | ✅ No leaks |
-| Allocation blocks | 51,800 | Properly freed |
-
-#### Valgrind Memcheck Results
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| Definitely lost | **0 bytes** | ✅ No leaks |
-| Indirectly lost | **0 bytes** | ✅ No leaks |
-| Possibly lost | **0 bytes** | ✅ No leaks |
-| Still reachable | 544 bytes | Expected |
-| Total allocations | 51,808 | Properly freed |
-| Total freed | 51,804 | 99.99% |
-| Heap allocated | 7.7 MB | Expected |
-| Errors | **0** | ✅ Clean |
-
-The 544 bytes "still reachable" at exit are expected static allocations:
-- Thread-local `HOT_CACHE` storage (64 bytes)
-- Thread info BTree for stack overflow handling (456 bytes)
-- Global allocator metadata (24 bytes)
-
-### Running Memory Profiler
-
-```bash
-# With dhat (recommended)
-cargo run --example memory_profiler --features dhat-heap --release
-# View: https://nnethercote.github.io/dh_view/dh_view.html
-
-# With Valgrind (if installed)
-cargo build --example memory_profiler --profile profiling
-valgrind --leak-check=full ./target/profiling/examples/memory_profiler
-
-# With AddressSanitizer (nightly)
-RUSTFLAGS="-Z sanitizer=address" cargo +nightly run --example memory_profiler
-
-# With LeakSanitizer (nightly)
-RUSTFLAGS="-Z sanitizer=leak" cargo +nightly run --example memory_profiler
-```
-
-### Test Scenarios Covered
-
-- ✅ Singleton registration/resolution (500 iterations)
-- ✅ Lazy singleton initialization (500 iterations)
-- ✅ Transient service creation (5,000 iterations)
-- ✅ Scope creation/destruction (500 iterations)
-- ✅ Nested scopes (200 iterations, 3 levels deep)
-- ✅ Complex dependency graphs (500 iterations)
-- ✅ Container lifecycle (500 iterations)
-- ✅ Large allocations (300 iterations, 1KB+ each)
-- ✅ Access patterns (2,000 iterations)
-
----
-
-*Last updated: December 2025*
-*Fuzzing: All targets passing (1M+ iterations)*
-*Memory: No leaks detected (dhat + Valgrind verified)*
 *See [CHANGELOG.md](CHANGELOG.md) for version history*
+*See [BENCHMARK_COMPARISON.md](BENCHMARK_COMPARISON.md) for cross-language benchmarks*
+*See [RUST_DI_COMPARISON.md](RUST_DI_COMPARISON.md) for Rust ecosystem comparison*
