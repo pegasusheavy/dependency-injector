@@ -1,6 +1,6 @@
 # Dependency Injector: Cross-Language Benchmark Comparison
 
-Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go, Node.js, and Python DI libraries.
+Comprehensive benchmarks comparing Rust `dependency-injector` against popular Go, Node.js, Python, and C# DI libraries.
 
 **Test Environment:**
 - CPU: Intel Core i9-13900K (32 threads)
@@ -255,42 +255,92 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 
 ---
 
-## Summary: Rust vs Go vs Node.js vs Python DI Performance
+## C# DI Libraries Compared
 
-### Speed Comparison
+| Library | Version | Type | Description |
+|---------|---------|------|-------------|
+| **Manual DI** | - | Baseline | Direct object instantiation |
+| **Dictionary-based** | - | Runtime | C# Dictionary for storage |
+| **Microsoft.Extensions.DI** | 8.0 | Runtime | Built-in .NET DI framework |
 
-| Operation | Go Best | Node.js Best | Python Best | Rust dependency-injector |
-|-----------|---------|--------------|-------------|--------------------------|
-| Singleton lookup | 15 ns | 136 ns | 56 ns | **17-32 ns** |
-| Dependency chain | 11 ns | 12 ns | 78 ns | **16-17 ns** |
-| Container creation | 0.3 ns | 877 ns | 81 ns | 434-740 ns |
-| Mixed workload (100 ops) | 7 µs | 6.6 µs | 15 µs | **2.2 µs** |
+---
+
+## C# Benchmark Results
+
+### 1. Singleton Resolution
+
+| Library | Language | Time (ns) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **17-32** | **1.0x** |
+| C# Dictionary | C# | 142 | 4-8x |
+| C# MS.Extensions.DI | C# | 208 | 6-12x |
+| C# Manual | C# | 393 | 12-23x |
+
+### 2. Deep Dependency Chain (4 levels)
+
+| Library | Language | Time (ns) | vs Fastest |
+|---------|----------|-----------|------------|
+| C# Manual | C# | 4 | 1.0x |
+| **Rust dependency-injector** | Rust | **16-17** | 4x |
+| C# Dictionary | C# | 64 | 16x |
+| C# MS.Extensions.DI | C# | 237 | 59x |
+
+### 3. Container Creation
+
+| Library | Language | Time | vs Fastest |
+|---------|----------|------|------------|
+| C# Dictionary | C# | 203 ns | 1.0x |
+| **Rust dependency-injector** | Rust | 434-740 ns | 2-4x |
+| C# Manual | C# | 1,604 ns | 8x |
+| C# MS.Extensions.DI | C# | 13,580 ns | 67x |
+
+### 4. Mixed Workload (100 operations)
+
+| Library | Language | Time (µs) | vs Fastest |
+|---------|----------|-----------|------------|
+| **Rust dependency-injector** | Rust | **2.2** | **1.0x** |
+| C# Manual | C# | 3.4 | 1.5x |
+| C# Dictionary | C# | 30.1 | 14x |
+| C# MS.Extensions.DI | C# | 31.2 | 14x |
+
+---
+
+## Summary: Rust vs Go vs Node.js vs Python vs C# DI Performance
+
+### Speed Comparison (Best per Language)
+
+| Operation | Go | Node.js | Python | C# | Rust |
+|-----------|-----|---------|--------|-----|------|
+| Singleton lookup | 15 ns | 136 ns | 56 ns | 142 ns | **17-32 ns** |
+| Dependency chain | 11 ns | 12 ns | 78 ns | 4 ns | **16-17 ns** |
+| Container creation | 0.3 ns | 877 ns | 81 ns | 203 ns | 434-740 ns |
+| Mixed workload (100 ops) | 7 µs | 6.6 µs | 15 µs | 3.4 µs | **2.2 µs** |
 
 ### Popular DI Library Comparison
 
-| Operation | Go samber/do | Node.js inversify | Python dep-injector | Rust dependency-injector |
-|-----------|--------------|-------------------|---------------------|--------------------------|
-| Singleton lookup | 767 ns | 1,829 ns | 95 ns | **17-32 ns** |
-| Dependency chain | 276 ns | 253 ns | 127 ns | **16-17 ns** |
-| Container creation | 27 µs | 139 µs | 601 µs | 434-740 ns |
-| Mixed workload (100 ops) | 125 µs | 15 µs | 15.7 µs | **2.2 µs** |
+| Operation | Go samber/do | Node.js inversify | Python dep-injector | C# MS.Extensions.DI | Rust dependency-injector |
+|-----------|--------------|-------------------|---------------------|---------------------|--------------------------|
+| Singleton lookup | 767 ns | 1,829 ns | 95 ns | 208 ns | **17-32 ns** |
+| Dependency chain | 276 ns | 253 ns | 127 ns | 237 ns | **16-17 ns** |
+| Container creation | 27 µs | 139 µs | 601 µs | 13.6 µs | 434-740 ns |
+| Mixed workload (100 ops) | 125 µs | 15 µs | 15.7 µs | 31 µs | **2.2 µs** |
 
 ### Feature Comparison
 
-| Feature | Go samber/do | Node.js inversify | Python dep-injector | Rust dependency-injector |
-|---------|--------------|-------------------|---------------------|--------------------------|
-| Singleton | ✅ | ✅ | ✅ | ✅ |
-| Transient | ✅ | ✅ | ✅ | ✅ |
-| Scoped | ✅ | ✅ | ✅ | ✅ |
-| Lazy | ✅ | ✅ | ✅ | ✅ |
-| Factory | ✅ | ✅ | ✅ | ✅ |
-| Named Services | ✅ | ✅ | ✅ | ❌ |
-| Decorators | ❌ | ✅ | ✅ | ❌ |
-| Async Support | ✅ | ✅ | ✅ | ✅ |
-| Zero Allocations | ❌ | ❌ | ❌ | ✅ |
-| Hot Cache | ❌ | ❌ | ❌ | ✅ |
-| Compile-time Safety | ❌ | ❌ | ❌ | ✅ |
-| Cython Optimized | ❌ | ❌ | ✅ | N/A |
+| Feature | Go samber/do | Node.js inversify | Python dep-injector | C# MS.Extensions.DI | Rust dependency-injector |
+|---------|--------------|-------------------|---------------------|---------------------|--------------------------|
+| Singleton | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Transient | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Scoped | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Lazy | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Factory | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Named Services | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Decorators | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Async Support | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Zero Allocations | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Hot Cache | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Compile-time Safety | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Source Generator | ❌ | ❌ | ❌ | ✅ | ❌ |
 
 ---
 
@@ -312,18 +362,22 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 3. 🥉 Python manual (56 ns)
 4. Python dependency-injector (95 ns)
 5. Node.js manual (136 ns)
-6. Go samber/do (767 ns)
-7. Node.js inversify (1,829 ns)
-8. Python injector (3,319 ns)
+6. C# Dictionary (142 ns)
+7. C# MS.Extensions.DI (208 ns)
+8. Go samber/do (767 ns)
+9. Node.js inversify (1,829 ns)
+10. Python injector (3,319 ns)
 
 **Mixed Workload (100 ops):**
 1. 🥇 **Rust dependency-injector** (2.2 µs)
-2. 🥈 Node.js Map (6.6 µs)
-3. 🥉 Go map+RWMutex (7 µs)
-4. Python manual (15.0 µs)
-5. Python dependency-injector (15.7 µs)
-6. Go samber/do (125 µs)
-7. Python injector (342 µs)
+2. 🥈 C# Manual (3.4 µs)
+3. 🥉 Node.js Map (6.6 µs)
+4. Go map+RWMutex (7 µs)
+5. Python manual (15.0 µs)
+6. Python dependency-injector (15.7 µs)
+7. C# Dictionary / MS.Extensions.DI (30-31 µs)
+8. Go samber/do (125 µs)
+9. Python injector (342 µs)
 
 ### When to Use Each
 
@@ -348,6 +402,11 @@ Simulating realistic usage: 80% resolutions, 15% lookups, 5% scope creation.
 - **dependency-injector**: Best balance of features and performance (~95ns, Cython-optimized)
 - **punq**: Lightweight alternative with good performance (~824ns)
 - **injector (Google)**: When you need advanced features but can accept slower resolution
+
+#### C# DI Libraries
+- **Manual/Dictionary**: When you need maximum speed in hot paths
+- **MS.Extensions.DI**: Standard choice for ASP.NET Core applications (~208ns, full-featured)
+- For high-performance scenarios, consider the Rust FFI bindings
 
 ---
 
@@ -385,6 +444,13 @@ pip install dependency-injector injector punq
 python benchmark.py
 ```
 
+### C# Benchmarks
+
+```bash
+cd benchmarks/csharp-comparison
+dotnet run -c Release
+```
+
 ---
 
-*Benchmarks run on Intel i9-13900K, Linux, Python 3.13.3, Node.js v22.13.1, Go 1.24, Rust 1.85, December 2025*
+*Benchmarks run on Intel i9-13900K, Linux, .NET 8.0, Python 3.13.3, Node.js v22.13.1, Go 1.24, Rust 1.85, December 2025*
