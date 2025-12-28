@@ -3,13 +3,13 @@
 export const CODE_SNIPPETS = {
   // Installation
   install: `<span class="text-slate-500">[dependencies]</span>
-<span class="text-rust-400">dependency-injector</span> = <span class="text-green-400">"0.1"</span>`,
+<span class="text-rust-400">dependency-injector</span> = <span class="text-green-400">"0.2"</span>`,
 
   features: `<span class="text-slate-500">[dependencies]</span>
-<span class="text-rust-400">dependency-injector</span> = { version = <span class="text-green-400">"0.1"</span>, features = [<span class="text-green-400">"async"</span>] }
+<span class="text-rust-400">dependency-injector</span> = { version = <span class="text-green-400">"0.2"</span>, features = [<span class="text-green-400">"async"</span>] }
 
 <span class="text-slate-500"># Or disable default features</span>
-<span class="text-rust-400">dependency-injector</span> = { version = <span class="text-green-400">"0.1"</span>, default-features = <span class="text-purple-400">false</span> }`,
+<span class="text-rust-400">dependency-injector</span> = { version = <span class="text-green-400">"0.2"</span>, default-features = <span class="text-purple-400">false</span> }`,
 
   // Quick Start / Home Example
   example: `<span class="text-purple-400">use</span> dependency_injector::Container;

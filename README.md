@@ -22,14 +22,14 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dependency-injector = "0.1"
+dependency-injector = "0.2"
 ```
 
 ### Optional Features
 
 ```toml
 [dependencies]
-dependency-injector = { version = "0.1", features = ["logging-json"] }
+dependency-injector = { version = "0.2", features = ["logging-json"] }
 ```
 
 | Feature | Description |
