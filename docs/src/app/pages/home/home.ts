@@ -19,8 +19,8 @@ export class HomePage {
     { title: 'Type-Safe', description: 'Compile-time type checking with zero runtime overhead. Errors caught before deployment.', icon: 'shield' },
     { title: 'Zero-Config', description: 'Any Send + Sync + \'static type is automatically injectable. No boilerplate required.', icon: 'cubes' },
     { title: 'Scoped Containers', description: 'Hierarchical scopes with full parent chain resolution. Perfect for request-scoped services.', icon: 'layer-group' },
-    { title: 'Flexible Lifetimes', description: 'Singleton, lazy singleton, and transient lifetimes. Choose what fits your use case.', icon: 'flask' },
-    { title: 'Observable', description: 'Optional tracing integration for debugging and monitoring service resolution.', icon: 'chart-line' }
+    { title: 'Cross-Language FFI', description: 'Use from Go, Python, Node.js, and C# via native FFI bindings. One container, all languages.', icon: 'globe' },
+    { title: '6-57x Faster', description: 'Benchmarked against Go, Python, Node.js, C# DI frameworks. Rust delivers unmatched performance.', icon: 'rocket' }
   ];
 
   benefits = [

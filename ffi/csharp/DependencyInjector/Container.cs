@@ -71,7 +71,7 @@ namespace DependencyInjector
             ThrowIfDisposed();
             var typeId = typeof(T).FullName ?? typeof(T).Name;
             var resultPtr = NativeBindings.di_resolve(_handle, typeId);
-            
+
             if (resultPtr == IntPtr.Zero)
             {
                 return null;

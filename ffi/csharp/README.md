@@ -32,8 +32,8 @@ using DependencyInjector;
 using var container = new Container();
 
 // Register a singleton
-container.Singleton(new Config 
-{ 
+container.Singleton(new Config
+{
     DatabaseUrl = "postgres://localhost/db",
     MaxConnections = 10
 });

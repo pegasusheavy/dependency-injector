@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// C# DI Library Benchmark Comparison
-/// 
+///
 /// Compares:
 /// - Manual DI (baseline)
 /// - Dictionary-based DI (simple runtime)
