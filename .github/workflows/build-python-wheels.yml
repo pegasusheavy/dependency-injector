@@ -30,7 +30,7 @@ jobs:
             rust_target: x86_64-unknown-linux-gnu
             python_arch: x86_64
             lib_name: libdependency_injector.so
-          
+
           # Linux ARM64
           - os: ubuntu-latest
             platform: manylinux_2_17_aarch64
@@ -38,21 +38,21 @@ jobs:
             python_arch: aarch64
             lib_name: libdependency_injector.so
             cross: true
-          
+
           # macOS x64 (Intel)
           - os: macos-13
             platform: macosx_10_12_x86_64
             rust_target: x86_64-apple-darwin
             python_arch: x86_64
             lib_name: libdependency_injector.dylib
-          
+
           # macOS ARM64 (Apple Silicon)
           - os: macos-14
             platform: macosx_11_0_arm64
             rust_target: aarch64-apple-darwin
             python_arch: arm64
             lib_name: libdependency_injector.dylib
-          
+
           # Windows x64
           - os: windows-latest
             platform: win_amd64
@@ -163,7 +163,7 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/project/dependency-injector-rust/
-    
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -184,7 +184,7 @@ jobs:
     name: Upload to GitHub Release
     needs: [build-wheels, build-sdist]
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4

@@ -9,44 +9,52 @@ C# bindings for the high-performance Rust dependency injection container.
 - 🔄 **Scoped Containers** - Hierarchical scopes for request-level isolation
 - 🧵 **Thread-Safe** - Safe to use from multiple threads
 - 🔌 **P/Invoke** - Direct native bindings via P/Invoke
-
-## Requirements
-
-- .NET 8.0 or later
-- Native `dependency_injector` library (compiled from Rust)
-
-## Building the Native Library
-
-```bash
-# From the project root
-cd /path/to/dependency-injector
-cargo rustc --release --features ffi --crate-type cdylib
-
-# The library will be at:
-# Linux:   target/release/libdependency_injector.so
-# macOS:   target/release/libdependency_injector.dylib
-# Windows: target/release/dependency_injector.dll
-```
-
-Set the library path:
-
-```bash
-# Linux
-export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
-
-# macOS
-export DYLD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$DYLD_LIBRARY_PATH
-
-# Windows (add to PATH or copy DLL to output directory)
-set PATH=%PATH%;C:\path\to\dependency-injector\target\release
-```
+- 📥 **Pre-built Natives** - Native libraries bundled for all major platforms
 
 ## Installation
 
-Add a reference to the `DependencyInjector` project or use the NuGet package (when published):
-
 ```bash
 dotnet add package PegasusHeavy.DependencyInjector
+```
+
+The NuGet package includes pre-built native libraries for:
+
+| Platform | Architecture |
+|----------|--------------|
+| Linux | x64, arm64 |
+| macOS | x64 (Intel), arm64 (Apple Silicon) |
+| Windows | x64 |
+
+### Manual Build (Optional)
+
+If you want to build the native library from source:
+
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Clone and build
+git clone https://github.com/pegasusheavy/dependency-injector
+cd dependency-injector
+cargo rustc --release --features ffi --crate-type cdylib
+
+# Point to your build
+export DI_LIBRARY_PATH=$(pwd)/target/release/libdependency_injector.so
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DI_LIBRARY_PATH` | Custom path to native library |
+
+### Debugging Library Loading
+
+You can check which library was loaded:
+
+```csharp
+Console.WriteLine($"Library path: {Container.LibraryPath}");
+Console.WriteLine($"Library version: {Container.Version}");
 ```
 
 ## Quick Start

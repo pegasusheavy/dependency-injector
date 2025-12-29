@@ -4,16 +4,40 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- Package metadata -->
     <PackageId>PegasusHeavy.DependencyInjector</PackageId>
     <Version>0.2.2</Version>
     <Authors>Pegasus Heavy Industries</Authors>
-    <Description>C# bindings for the high-performance Rust dependency injection container</Description>
+    <Description>C# bindings for the high-performance Rust dependency injection container. Native libraries bundled for Linux, macOS, and Windows.</Description>
     <PackageLicenseExpression>MIT OR Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/pegasusheavy/dependency-injector</PackageProjectUrl>
     <RepositoryUrl>https://github.com/pegasusheavy/dependency-injector</RepositoryUrl>
     <PackageTags>dependency-injection;di;ioc;container;rust;ffi;native</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    
+    <!-- Include native libraries -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
+
+  <!-- Include README in package -->
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <!-- Include native libraries for each platform -->
+  <ItemGroup>
+    <None Include="runtimes/**/*" Pack="true" PackagePath="runtimes" />
+  </ItemGroup>
+
+  <!-- Native library references for build -->
+  <ItemGroup Condition="Exists('runtimes')">
+    <None Include="runtimes/linux-x64/native/*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'" />
+    <None Include="runtimes/linux-arm64/native/*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'" />
+    <None Include="runtimes/osx-x64/native/*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'" />
+    <None Include="runtimes/osx-arm64/native/*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'" />
+    <None Include="runtimes/win-x64/native/*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" Condition="$([MSBuild]::IsOSPlatform('Windows')) And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'" />
+  </ItemGroup>
 
 </Project>

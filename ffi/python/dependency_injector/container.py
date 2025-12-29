@@ -71,7 +71,7 @@ def _get_library_name() -> str:
 
 def _find_library() -> str:
     """Find the native library path.
-    
+
     Search order:
     1. DI_LIBRARY_PATH environment variable
     2. Bundled native library (in package's native/ directory)
@@ -91,16 +91,16 @@ def _find_library() -> str:
     search_paths: list[Path | str] = [
         # 1. Bundled in package (from wheel with native library)
         package_dir / "native" / lib_name,
-        
+
         # 2. Development: local cargo build
         package_dir.parent.parent.parent / "target" / "release" / lib_name,
         package_dir.parent.parent.parent.parent / "target" / "release" / lib_name,
         package_dir.parent.parent.parent.parent.parent / "target" / "release" / lib_name,
-        
+
         # 3. System paths (Linux/macOS)
         Path("/usr/local/lib") / lib_name,
         Path("/usr/lib") / lib_name,
-        
+
         # 4. Fallback to system library search
         lib_name,
     ]
@@ -115,7 +115,7 @@ def _find_library() -> str:
 
 def get_library_path() -> str:
     """Get the path to the loaded native library.
-    
+
     Returns:
         The path to the native library that was loaded.
     """
