@@ -45,11 +45,11 @@ namespace DependencyInjector.Native
 
             // Try loading from various locations
             var paths = GetSearchPaths();
-            
+
             foreach (var path in paths)
             {
                 if (string.IsNullOrEmpty(path)) continue;
-                
+
                 if (File.Exists(path))
                 {
                     if (NativeLibrary.TryLoad(path, out _libraryHandle))
@@ -88,7 +88,7 @@ namespace DependencyInjector.Native
             // 2. Runtime-specific directory (from NuGet package)
             var rid = GetRuntimeIdentifier();
             yield return Path.Combine(assemblyDir, "runtimes", rid, "native", libraryName);
-            
+
             // 3. Same directory as assembly
             yield return Path.Combine(assemblyDir, libraryName);
 
@@ -125,7 +125,7 @@ namespace DependencyInjector.Native
         {
             var os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win" :
                      RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx" : "linux";
-            
+
             var arch = RuntimeInformation.OSArchitecture switch
             {
                 Architecture.X64 => "x64",

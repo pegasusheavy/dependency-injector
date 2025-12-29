@@ -16,7 +16,7 @@
     <RepositoryUrl>https://github.com/pegasusheavy/dependency-injector</RepositoryUrl>
     <PackageTags>dependency-injection;di;ioc;container;rust;ffi;native</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    
+
     <!-- Include native libraries -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
