@@ -344,6 +344,82 @@ pub unsafe extern "C" fn di_resolve(
     }
 }
 
+/// Resolve a service and return its data as a JSON string.
+///
+/// This is a convenience function for languages that use JSON serialization.
+///
+/// # Arguments
+/// - `container` - The container to resolve from
+/// - `type_name` - The service type name to resolve
+///
+/// # Returns
+/// A pointer to the null-terminated JSON string, or NULL if not found.
+/// The pointer must be freed with `di_string_free()`.
+///
+/// # Safety
+/// - `container` must be a valid container pointer
+/// - `type_name` must be a valid null-terminated UTF-8 string
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn di_resolve_json(
+    container: *mut DiContainer,
+    type_name: *const c_char,
+) -> *mut c_char {
+    // Validate container
+    if container.is_null() {
+        set_last_error("Container pointer is null");
+        return ptr::null_mut();
+    }
+
+    // Validate type_name
+    if type_name.is_null() {
+        set_last_error("Type name is null");
+        return ptr::null_mut();
+    }
+
+    // SAFETY: Caller guarantees type_name is valid
+    let type_name_str = match unsafe { CStr::from_ptr(type_name) }.to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            set_last_error("Type name is not valid UTF-8");
+            return ptr::null_mut();
+        }
+    };
+
+    // SAFETY: Caller guarantees container is valid
+    let container = unsafe { &*container };
+
+    // Look up the service
+    let services = container.services.read().unwrap();
+    match services.get(&type_name_str) {
+        Some(service_arc) => {
+            // Downcast to Vec<u8>
+            if let Some(data) = service_arc.downcast_ref::<Vec<u8>>() {
+                // Convert bytes to string (assuming UTF-8 JSON)
+                match std::str::from_utf8(data) {
+                    Ok(json_str) => match CString::new(json_str) {
+                        Ok(cstr) => cstr.into_raw(),
+                        Err(_) => {
+                            set_last_error("JSON string contains null bytes");
+                            ptr::null_mut()
+                        }
+                    },
+                    Err(_) => {
+                        set_last_error("Service data is not valid UTF-8");
+                        ptr::null_mut()
+                    }
+                }
+            } else {
+                set_last_error("Internal error: service data type mismatch");
+                ptr::null_mut()
+            }
+        }
+        None => {
+            set_last_error(format!("Service '{}' not found", type_name_str));
+            ptr::null_mut()
+        }
+    }
+}
+
 /// Check if a service is registered.
 ///
 /// # Returns

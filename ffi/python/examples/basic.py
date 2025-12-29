@@ -6,7 +6,7 @@ To run this example:
 
 1. Build the Rust library:
    cd /path/to/dependency-injector
-   cargo build --release --features ffi
+   cargo rustc --release --features ffi --crate-type cdylib
 
 2. Set the library path:
    export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
@@ -19,15 +19,15 @@ To run this example:
 from __future__ import annotations
 
 import sys
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from dataclasses import dataclass, asdict
 from typing import TypedDict
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dependency_injector import Container, DIError, ErrorCode
-from dependency_injector.container import CachingContainer
 
 
 # Type definitions for better IDE support
@@ -57,7 +57,7 @@ class RequestContext(TypedDict):
     user_agent: str
 
 
-def main():
+def main() -> None:
     print("╔════════════════════════════════════════════════════════════╗")
     print("║         dependency-injector Python Example                  ║")
     print("╚════════════════════════════════════════════════════════════╝\n")
@@ -65,8 +65,8 @@ def main():
     # Get library version
     print(f"Library version: {Container.version()}\n")
 
-    # Use CachingContainer for full resolve support
-    container = CachingContainer()
+    # Create container
+    container = Container()
     print("✓ Created root container")
 
     try:
@@ -113,10 +113,16 @@ def main():
         print("\n--- Resolving Services ---")
 
         resolved_config = container.resolve("Config")
-        print(f"✓ Resolved Config: port={resolved_config['port']}, debug={resolved_config['debug']}")
+        print(
+            f"✓ Resolved Config: port={resolved_config['port']}, "
+            f"debug={resolved_config['debug']}"
+        )
 
         resolved_db = container.resolve("DatabaseConfig")
-        print(f"✓ Resolved DatabaseConfig: {resolved_db['host']}:{resolved_db['port']}/{resolved_db['database']}")
+        print(
+            f"✓ Resolved DatabaseConfig: {resolved_db['host']}:"
+            f"{resolved_db['port']}/{resolved_db['database']}"
+        )
 
         resolved_user = container.resolve("AdminUser")
         print(f"✓ Resolved AdminUser: {resolved_user['name']} <{resolved_user['email']}>")
@@ -130,7 +136,6 @@ def main():
         print("✓ Created request scope")
 
         # Register request-specific context
-        import time
         request_context: RequestContext = {
             "request_id": f"req-{int(time.time() * 1000)}",
             "timestamp": time.time(),
@@ -148,7 +153,9 @@ def main():
         print(f"✓ Resolved RequestContext: {ctx['request_id']}")
 
         # Parent cannot see request-scoped services
-        print(f"✓ Parent sees 'RequestContext': {container.contains('RequestContext')}")  # False
+        print(
+            f"✓ Parent sees 'RequestContext': {container.contains('RequestContext')}"
+        )  # False
 
         # Nested scopes
         nested_scope = request_scope.scope()
@@ -179,6 +186,16 @@ def main():
             print(f"✓ Caught expected error: {e}")
             print(f"  Error code: {ErrorCode(e.code).name}")
 
+        # === try_resolve ===
+        print("\n--- Optional Resolution ---")
+
+        # try_resolve returns None for missing services instead of raising
+        missing = container.try_resolve("DoesNotExist")
+        print(f"✓ try_resolve for missing service: {missing}")  # None
+
+        found = container.try_resolve("Config")
+        print(f"✓ try_resolve for existing service: found={found is not None}")
+
         # === Complex Data Types ===
         print("\n--- Complex Data Types ---")
 
@@ -188,16 +205,22 @@ def main():
         print(f"✓ List: {', '.join(flags)}")
 
         # Nested objects
-        container.register("AppState", {
-            "user": {"id": 1, "name": "Test"},
-            "settings": {
-                "theme": "dark",
-                "notifications": {"email": True, "push": False},
+        container.register(
+            "AppState",
+            {
+                "user": {"id": 1, "name": "Test"},
+                "settings": {
+                    "theme": "dark",
+                    "notifications": {"email": True, "push": False},
+                },
+                "history": ["/home", "/profile", "/settings"],
             },
-            "history": ["/home", "/profile", "/settings"],
-        })
+        )
         state = container.resolve("AppState")
-        print(f"✓ Nested object: user={state['user']['name']}, theme={state['settings']['theme']}")
+        print(
+            f"✓ Nested object: user={state['user']['name']}, "
+            f"theme={state['settings']['theme']}"
+        )
 
         # Dataclass example
         @dataclass
@@ -212,6 +235,15 @@ def main():
         resolved_product = container.resolve("Product")
         print(f"✓ Dataclass: {resolved_product['name']} - ${resolved_product['price']}")
 
+        # === Context Manager ===
+        print("\n--- Context Manager ---")
+
+        with Container() as temp_container:
+            temp_container.register("Temp", {"value": "temporary"})
+            temp_result = temp_container.resolve("Temp")
+            print(f"✓ Context manager: {temp_result}")
+        print("✓ Container automatically freed after 'with' block")
+
         print("\n✅ All examples completed successfully!")
 
     finally:
@@ -222,4 +254,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

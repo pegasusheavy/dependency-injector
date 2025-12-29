@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BenchmarkService, ProcessedBenchmark } from '../../services/benchmark.service';
+import { SeoService } from '../../services/seo.service';
 
 @Component({
   selector: 'app-benchmarks',
@@ -12,8 +13,10 @@ import { BenchmarkService, ProcessedBenchmark } from '../../services/benchmark.s
 })
 export class BenchmarksPage implements OnInit {
   readonly benchmarkService = inject(BenchmarkService);
+  private readonly seo = inject(SeoService);
 
   ngOnInit(): void {
+    this.seo.setBenchmarksSeo();
     this.benchmarkService.loadBenchmarks();
   }
 
@@ -80,4 +83,3 @@ export class BenchmarksPage implements OnInit {
     });
   }
 }
-

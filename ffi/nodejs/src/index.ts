@@ -2,7 +2,7 @@
  * Node.js bindings for the dependency-injector Rust library.
  *
  * This module provides a high-level TypeScript API for the dependency injection
- * container, wrapping the native FFI calls.
+ * container, wrapping the native FFI calls using koffi.
  *
  * @example
  * ```typescript
@@ -23,15 +23,10 @@
  * @module
  */
 
-import ffi from "ffi-napi";
-import ref from "ref-napi";
+import koffi from "koffi";
 import path from "path";
 import { fileURLToPath } from "url";
-
-// Types for FFI
-const voidPtr = ref.refType(ref.types.void);
-const charPtr = ref.refType(ref.types.char);
-const uint8Ptr = ref.refType(ref.types.uint8);
+import fs from "fs";
 
 /**
  * Error codes from the native library.
@@ -76,72 +71,99 @@ export class DIError extends Error {
  * Find the native library path.
  */
 function findLibraryPath(): string {
+  // Get current file directory (ESM compatible)
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
   // Try multiple locations
   const possiblePaths = [
     // Development: relative to ffi directory
-    path.resolve(__dirname, "../../../target/release/libdependency_injector"),
-    path.resolve(__dirname, "../../../../target/release/libdependency_injector"),
-    // Installed: from LD_LIBRARY_PATH or system
-    "libdependency_injector",
+    path.resolve(__dirname, "../../../target/release/libdependency_injector.so"),
+    path.resolve(__dirname, "../../../../target/release/libdependency_injector.so"),
+    path.resolve(__dirname, "../../../target/release/libdependency_injector.dylib"),
+    path.resolve(__dirname, "../../../../target/release/libdependency_injector.dylib"),
+    path.resolve(__dirname, "../../../target/release/dependency_injector.dll"),
+    path.resolve(__dirname, "../../../../target/release/dependency_injector.dll"),
     // Custom path from environment
     process.env.DI_LIBRARY_PATH,
   ].filter(Boolean) as string[];
 
-  // Return the first path (ffi-napi will try them)
+  // Find first existing path
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  // Return the first path and let koffi handle the error
   return possiblePaths[0];
 }
 
+// Define koffi types
+const ContainerPtr = koffi.pointer("DiContainer", koffi.opaque());
+const ServicePtr = koffi.pointer("DiService", koffi.opaque());
+
 // Load the native library
-let lib: ReturnType<typeof ffi.Library>;
+let lib: ReturnType<typeof koffi.load>;
 
 try {
-  lib = ffi.Library(findLibraryPath(), {
-    // Container lifecycle
-    di_container_new: [voidPtr, []],
-    di_container_free: ["void", [voidPtr]],
-    di_container_scope: [voidPtr, [voidPtr]],
-
-    // Registration
-    di_register_singleton: ["int", [voidPtr, "string", uint8Ptr, "size_t"]],
-    di_register_singleton_json: ["int", [voidPtr, "string", "string"]],
-
-    // Resolution
-    di_resolve: [voidPtr, [voidPtr, "string"]], // Returns DiResult struct, simplified
-    di_contains: ["int", [voidPtr, "string"]],
-    di_service_count: ["int64", [voidPtr]],
-
-    // Service data
-    di_service_data: [uint8Ptr, [voidPtr]],
-    di_service_data_len: ["size_t", [voidPtr]],
-    di_service_free: ["void", [voidPtr]],
-
-    // Error handling
-    di_error_message: [charPtr, []],
-    di_error_clear: ["void", []],
-    di_string_free: ["void", [charPtr]],
-
-    // Utility
-    di_version: ["string", []],
-  });
+  const libPath = findLibraryPath();
+  lib = koffi.load(libPath);
 } catch (error) {
   throw new Error(
     `Failed to load dependency-injector native library. ` +
-      `Make sure you've built it with: cargo build --release --features ffi\n` +
+      `Make sure you've built it with: cargo rustc --release --features ffi --crate-type cdylib\n` +
       `Original error: ${error}`
   );
 }
+
+// Define FFI functions
+const di_container_new = lib.func("di_container_new", ContainerPtr, []);
+const di_container_free = lib.func("di_container_free", "void", [ContainerPtr]);
+const di_container_scope = lib.func("di_container_scope", ContainerPtr, [ContainerPtr]);
+
+const di_register_singleton = lib.func("di_register_singleton", "int", [
+  ContainerPtr,
+  "str",
+  koffi.pointer("uint8_t"),
+  "size_t",
+]);
+const di_register_singleton_json = lib.func("di_register_singleton_json", "int", [
+  ContainerPtr,
+  "str",
+  "str",
+]);
+
+const di_resolve_json = lib.func("di_resolve_json", "str", [ContainerPtr, "str"]);
+const di_contains = lib.func("di_contains", "int", [ContainerPtr, "str"]);
+const di_service_count = lib.func("di_service_count", "int64", [ContainerPtr]);
+
+const di_error_message = lib.func("di_error_message", "str", []);
+const di_error_clear = lib.func("di_error_clear", "void", []);
+const di_string_free = lib.func("di_string_free", "void", ["str"]);
+
+const di_version = lib.func("di_version", "str", []);
 
 /**
  * Get the last error message from the native library.
  */
 function getLastError(): string | null {
-  const errorPtr = lib.di_error_message();
-  if (errorPtr.isNull()) {
+  const error = di_error_message();
+  if (!error) {
     return null;
   }
-  const error = errorPtr.readCString();
-  lib.di_string_free(errorPtr);
   return error;
+}
+
+/**
+ * Clear the last error in the native library.
+ */
+function clearError(): void {
+  di_error_clear();
 }
 
 /**
@@ -170,15 +192,15 @@ function getLastError(): string | null {
  * ```
  */
 export class Container {
-  private ptr: Buffer | null;
+  private ptr: unknown | null;
   private isFreed = false;
 
   /**
    * Create a new dependency injection container.
    */
   constructor() {
-    this.ptr = lib.di_container_new();
-    if (this.ptr.isNull()) {
+    this.ptr = di_container_new();
+    if (!this.ptr) {
       throw new DIError(ErrorCode.InternalError, "Failed to create container");
     }
   }
@@ -187,7 +209,7 @@ export class Container {
    * Create a container from an existing native pointer.
    * @internal
    */
-  private static fromPtr(ptr: Buffer): Container {
+  private static fromPtr(ptr: unknown): Container {
     const container = Object.create(Container.prototype);
     container.ptr = ptr;
     container.isFreed = false;
@@ -198,7 +220,7 @@ export class Container {
    * Check if the container has been freed.
    */
   private ensureNotFreed(): void {
-    if (this.isFreed || !this.ptr || this.ptr.isNull()) {
+    if (this.isFreed || !this.ptr) {
       throw new DIError(ErrorCode.InvalidArgument, "Container has been freed");
     }
   }
@@ -209,8 +231,8 @@ export class Container {
    * After calling this method, the container can no longer be used.
    */
   free(): void {
-    if (!this.isFreed && this.ptr && !this.ptr.isNull()) {
-      lib.di_container_free(this.ptr);
+    if (!this.isFreed && this.ptr) {
+      di_container_free(this.ptr);
       this.isFreed = true;
       this.ptr = null;
     }
@@ -244,8 +266,9 @@ export class Container {
    */
   scope(): Container {
     this.ensureNotFreed();
-    const childPtr = lib.di_container_scope(this.ptr!);
-    if (childPtr.isNull()) {
+    clearError();
+    const childPtr = di_container_scope(this.ptr!);
+    if (!childPtr) {
       const error = getLastError();
       throw new DIError(ErrorCode.InternalError, error || "Failed to create scope");
     }
@@ -269,6 +292,7 @@ export class Container {
    */
   register<T>(typeName: string, value: T): void {
     this.ensureNotFreed();
+    clearError();
 
     let json: string;
     try {
@@ -280,25 +304,7 @@ export class Container {
       );
     }
 
-    const code = lib.di_register_singleton_json(this.ptr!, typeName, json);
-    if (code !== ErrorCode.Ok) {
-      const error = getLastError();
-      throw DIError.fromCode(code, error || undefined);
-    }
-  }
-
-  /**
-   * Register a singleton service with raw bytes.
-   *
-   * Use this for binary data that shouldn't be JSON-serialized.
-   *
-   * @param typeName - A unique identifier for this service type.
-   * @param data - The raw byte data.
-   */
-  registerBytes(typeName: string, data: Buffer): void {
-    this.ensureNotFreed();
-
-    const code = lib.di_register_singleton(this.ptr!, typeName, data, data.length);
+    const code = di_register_singleton_json(this.ptr!, typeName, json);
     if (code !== ErrorCode.Ok) {
       const error = getLastError();
       throw DIError.fromCode(code, error || undefined);
@@ -327,8 +333,17 @@ export class Container {
    * ```
    */
   resolve<T>(typeName: string): T {
-    const bytes = this.resolveBytes(typeName);
-    const json = bytes.toString("utf-8");
+    this.ensureNotFreed();
+    clearError();
+
+    const json = di_resolve_json(this.ptr!, typeName);
+    if (!json) {
+      const error = getLastError();
+      if (error) {
+        throw new DIError(ErrorCode.NotFound, error);
+      }
+      throw new DIError(ErrorCode.NotFound, `Service '${typeName}' not found`);
+    }
 
     try {
       return JSON.parse(json) as T;
@@ -341,39 +356,6 @@ export class Container {
   }
 
   /**
-   * Resolve a service and return raw bytes.
-   *
-   * @param typeName - The service type name to resolve.
-   * @returns The raw service data.
-   * @throws {DIError} If the service is not found.
-   */
-  resolveBytes(typeName: string): Buffer {
-    this.ensureNotFreed();
-
-    // Note: The actual di_resolve returns a DiResult struct.
-    // For simplicity in this binding, we check contains first
-    // and handle errors via the error message API.
-    const containsResult = lib.di_contains(this.ptr!, typeName);
-    if (containsResult === 0) {
-      throw new DIError(ErrorCode.NotFound, `Service '${typeName}' not found`);
-    }
-    if (containsResult < 0) {
-      throw new DIError(ErrorCode.InvalidArgument, "Invalid container or type name");
-    }
-
-    // For the simplified binding, we'll re-implement resolve logic
-    // In a production binding, you'd properly handle the DiResult struct
-    // For now, since we verified it exists, we can get it
-
-    // This is a simplified implementation - in production you'd want to
-    // properly handle the DiResult struct from di_resolve
-    throw new DIError(
-      ErrorCode.InternalError,
-      "Direct byte resolution not implemented in simplified binding. Use resolve<T>() with JSON serialization."
-    );
-  }
-
-  /**
    * Check if a service is registered.
    *
    * @param typeName - The service type name to check.
@@ -381,7 +363,7 @@ export class Container {
    */
   contains(typeName: string): boolean {
     this.ensureNotFreed();
-    const result = lib.di_contains(this.ptr!, typeName);
+    const result = di_contains(this.ptr!, typeName);
     return result === 1;
   }
 
@@ -392,7 +374,7 @@ export class Container {
    */
   get serviceCount(): number {
     this.ensureNotFreed();
-    return Number(lib.di_service_count(this.ptr!));
+    return Number(di_service_count(this.ptr!));
   }
 
   /**
@@ -401,11 +383,10 @@ export class Container {
    * @returns The version string.
    */
   static version(): string {
-    return lib.di_version();
+    return di_version();
   }
 }
 
 // Re-export types
 export { ErrorCode as DiErrorCode };
 export default Container;
-

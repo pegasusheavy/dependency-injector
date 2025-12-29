@@ -38,6 +38,39 @@
       </p>
       <app-code-block filename="multi_tenant.rs" [code]="multiTenantCode" />
 
+      <h2 id="cross-language"><fa-icon [icon]="['fas', 'globe']" class="mr-2"></fa-icon>Cross-Language Examples</h2>
+      <p>
+        Use dependency-injector from other languages via FFI bindings. Each language has idiomatic patterns for registration and resolution.
+      </p>
+
+      <div class="language-examples">
+        <div class="language-example">
+          <h4><fa-icon [icon]="['fab', 'golang']" class="mr-2 text-cyan-400"></fa-icon>Go</h4>
+          <p>Use cgo bindings with struct serialization:</p>
+          <code class="inline-code">container.RegisterValue("Config", Config&#123;Debug: true&#125;)</code>
+        </div>
+        <div class="language-example">
+          <h4><fa-icon [icon]="['fab', 'node-js']" class="mr-2 text-green-400"></fa-icon>Node.js / TypeScript</h4>
+          <p>TypeScript generics with koffi FFI:</p>
+          <code class="inline-code">container.register&lt;Config&gt;('Config', &#123; debug: true &#125;)</code>
+        </div>
+        <div class="language-example">
+          <h4><fa-icon [icon]="['fab', 'python']" class="mr-2 text-yellow-400"></fa-icon>Python</h4>
+          <p>Context manager pattern with ctypes:</p>
+          <code class="inline-code">with Container() as c: c.register("Config", &#123;"debug": True&#125;)</code>
+        </div>
+        <div class="language-example">
+          <h4><fa-icon [icon]="['fab', 'microsoft']" class="mr-2 text-blue-400"></fa-icon>C# / .NET</h4>
+          <p>IDisposable pattern with P/Invoke:</p>
+          <code class="inline-code">using var c = new Container(); c.Register("Config", config);</code>
+        </div>
+      </div>
+
+      <p class="text-slate-400 mt-4">
+        <fa-icon [icon]="['fas', 'arrow-right']" class="mr-2"></fa-icon>
+        See full examples in the <a routerLink="/docs/ffi">FFI Bindings</a> documentation.
+      </p>
+
       <h2 id="more-examples">More Examples</h2>
       <p>
         Find more examples in the GitHub repository:
@@ -49,6 +82,42 @@
              rel="noopener">
             <fa-icon [icon]="['fab', 'github']" class="mr-2"></fa-icon>
             examples/ directory on GitHub
+            <fa-icon [icon]="['fas', 'external-link']" class="ml-2 text-xs"></fa-icon>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/ffi/go/example"
+             target="_blank"
+             rel="noopener">
+            <fa-icon [icon]="['fab', 'golang']" class="mr-2"></fa-icon>
+            Go FFI examples
+            <fa-icon [icon]="['fas', 'external-link']" class="ml-2 text-xs"></fa-icon>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/ffi/nodejs/examples"
+             target="_blank"
+             rel="noopener">
+            <fa-icon [icon]="['fab', 'node-js']" class="mr-2"></fa-icon>
+            Node.js FFI examples
+            <fa-icon [icon]="['fas', 'external-link']" class="ml-2 text-xs"></fa-icon>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/ffi/python/examples"
+             target="_blank"
+             rel="noopener">
+            <fa-icon [icon]="['fab', 'python']" class="mr-2"></fa-icon>
+            Python FFI examples
+            <fa-icon [icon]="['fas', 'external-link']" class="ml-2 text-xs"></fa-icon>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/ffi/csharp/Example"
+             target="_blank"
+             rel="noopener">
+            <fa-icon [icon]="['fab', 'microsoft']" class="mr-2"></fa-icon>
+            C# FFI examples
             <fa-icon [icon]="['fas', 'external-link']" class="ml-2 text-xs"></fa-icon>
           </a>
         </li>

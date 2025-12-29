@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CodeBlockComponent } from '../../components/code-block/code-block';
 import { CODE_SNIPPETS } from '../../data/code-snippets';
+import { SeoService } from '../../services/seo.service';
 
 @Component({
   selector: 'app-home',
@@ -10,7 +11,9 @@ import { CODE_SNIPPETS } from '../../data/code-snippets';
   templateUrl: './home.html',
   styleUrl: './home.scss'
 })
-export class HomePage {
+export class HomePage implements OnInit {
+  private readonly seo = inject(SeoService);
+
   installCode = CODE_SNIPPETS.install;
   exampleCode = CODE_SNIPPETS.example;
 
@@ -29,4 +32,8 @@ export class HomePage {
     { title: 'Lazy by Default', description: 'Services created on first access. No wasted initialization.' },
     { title: 'Scoped Testing', description: 'Create child scopes to override services for testing without affecting parents.' }
   ];
+
+  ngOnInit(): void {
+    this.seo.setHomeSeo();
+  }
 }

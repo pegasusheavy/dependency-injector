@@ -8,7 +8,7 @@
 // First, build the Rust library:
 //
 //	cd /path/to/dependency-injector
-//	cargo build --release --features ffi
+//	cargo rustc --release --features ffi --crate-type cdylib
 //
 // Then set the library path:
 //
@@ -28,7 +28,7 @@
 //	}
 //
 //	// Resolve the service
-//	data, err := container.Resolve("UserService")
+//	data, err := container.ResolveJSON("UserService")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -37,7 +37,7 @@ package di
 
 /*
 #cgo LDFLAGS: -L${SRCDIR}/../../../target/release -ldependency_injector
-#cgo CFLAGS: -I${SRCDIR}/..
+#cgo CFLAGS: -I${SRCDIR}/../../
 
 #include "dependency_injector.h"
 #include <stdlib.h>
@@ -101,6 +101,14 @@ func (e *DIError) Error() string {
 	return e.Code.Error()
 }
 
+// Is implements errors.Is interface for error checking.
+func (e *DIError) Is(target error) bool {
+	if t, ok := target.(*DIError); ok {
+		return e.Code == t.Code
+	}
+	return false
+}
+
 // getLastError retrieves the last error message from the library.
 func getLastError() string {
 	cMsg := C.di_error_message()
@@ -109,6 +117,11 @@ func getLastError() string {
 	}
 	defer C.di_string_free(cMsg)
 	return C.GoString(cMsg)
+}
+
+// clearError clears the last error.
+func clearError() {
+	C.di_error_clear()
 }
 
 // Container wraps the Rust dependency injection container.
@@ -130,7 +143,11 @@ func NewContainer() *Container {
 
 // Free releases the container resources.
 // This is called automatically by the finalizer, but can be called explicitly.
+// Safe to call on nil container.
 func (c *Container) Free() {
+	if c == nil {
+		return
+	}
 	if c.ptr != nil {
 		C.di_container_free(c.ptr)
 		c.ptr = nil
@@ -143,6 +160,7 @@ func (c *Container) Scope() (*Container, error) {
 		return nil, errors.New("container is nil or freed")
 	}
 
+	clearError()
 	ptr := C.di_container_scope(c.ptr)
 	if ptr == nil {
 		return nil, &DIError{
@@ -162,6 +180,7 @@ func (c *Container) Register(typeName string, data []byte) error {
 		return errors.New("container is nil or freed")
 	}
 
+	clearError()
 	cTypeName := C.CString(typeName)
 	defer C.free(unsafe.Pointer(cTypeName))
 
@@ -186,6 +205,7 @@ func (c *Container) RegisterJSON(typeName string, jsonData string) error {
 		return errors.New("container is nil or freed")
 	}
 
+	clearError()
 	cTypeName := C.CString(typeName)
 	defer C.free(unsafe.Pointer(cTypeName))
 
@@ -211,52 +231,59 @@ func (c *Container) RegisterValue(typeName string, value interface{}) error {
 	return c.Register(typeName, data)
 }
 
-// Resolve retrieves a service by type name and returns its raw data.
+// Resolve retrieves a service by type name and returns its raw JSON data.
+// This uses the optimized di_resolve_json FFI function.
 func (c *Container) Resolve(typeName string) ([]byte, error) {
 	if c.ptr == nil {
 		return nil, errors.New("container is nil or freed")
 	}
 
+	clearError()
 	cTypeName := C.CString(typeName)
 	defer C.free(unsafe.Pointer(cTypeName))
 
-	result := C.di_resolve(c.ptr, cTypeName)
-	if result.code != C.DI_OK {
+	// Use di_resolve_json for simpler and faster resolution
+	jsonPtr := C.di_resolve_json(c.ptr, cTypeName)
+	if jsonPtr == nil {
+		errMsg := getLastError()
+		if errMsg != "" {
+			return nil, &DIError{
+				Code:    NotFound,
+				Message: errMsg,
+			}
+		}
 		return nil, &DIError{
-			Code:    ErrorCode(result.code),
-			Message: getLastError(),
+			Code:    NotFound,
+			Message: fmt.Sprintf("service '%s' not found", typeName),
 		}
 	}
+	defer C.di_string_free(jsonPtr)
 
-	if result.service == nil {
-		return nil, &DIError{
-			Code:    InternalError,
-			Message: "service is nil",
-		}
-	}
-	defer C.di_service_free(result.service)
-
-	dataPtr := C.di_service_data(result.service)
-	dataLen := C.di_service_data_len(result.service)
-
-	if dataLen == 0 {
-		return []byte{}, nil
-	}
-
-	// Copy the data to Go memory
-	data := make([]byte, dataLen)
-	copy(data, unsafe.Slice((*byte)(unsafe.Pointer(dataPtr)), dataLen))
-
-	return data, nil
+	// Copy the string to Go memory
+	return []byte(C.GoString(jsonPtr)), nil
 }
 
-// ResolveJSON retrieves a service and unmarshals it from JSON into the target.
-func (c *Container) ResolveJSON(typeName string, target interface{}) error {
+// ResolveInto retrieves a service and unmarshals it from JSON into the target.
+func (c *Container) ResolveInto(typeName string, target interface{}) error {
 	data, err := c.Resolve(typeName)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(data, target)
+}
+
+// ResolveJSON is an alias for ResolveInto for backwards compatibility.
+func (c *Container) ResolveJSON(typeName string, target interface{}) error {
+	return c.ResolveInto(typeName, target)
+}
+
+// TryResolve attempts to resolve a service, returning nil if not found.
+func (c *Container) TryResolve(typeName string) []byte {
+	data, err := c.Resolve(typeName)
+	if err != nil {
+		return nil
+	}
+	return data
 }
 
 // Contains checks if a service is registered.
@@ -285,3 +312,8 @@ func Version() string {
 	return C.GoString(C.di_version())
 }
 
+// ErrNotFound is a sentinel error for not found services.
+var ErrNotFound = &DIError{Code: NotFound}
+
+// ErrAlreadyRegistered is a sentinel error for duplicate registrations.
+var ErrAlreadyRegistered = &DIError{Code: AlreadyRegistered}

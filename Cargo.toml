@@ -101,3 +101,13 @@ opt-level = 1
 [[example]]
 name = "memory_profiler"
 path = "examples/memory_profiler.rs"
+
+[[example]]
+name = "derive"
+path = "examples/derive.rs"
+required-features = ["derive"]
+
+[[example]]
+name = "logging"
+path = "examples/logging.rs"
+required-features = ["logging"]

@@ -4,7 +4,7 @@
 //
 //  1. Build the Rust library:
 //     cd /path/to/dependency-injector
-//     cargo build --release --features ffi
+//     cargo rustc --release --features ffi --crate-type cdylib
 //
 //  2. Set the library path:
 //     export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -44,8 +45,10 @@ type DatabaseService struct {
 }
 
 func main() {
-	fmt.Printf("dependency-injector Go bindings example\n")
-	fmt.Printf("Library version: %s\n\n", di.Version())
+	fmt.Println("╔════════════════════════════════════════════════════════════╗")
+	fmt.Println("║          dependency-injector Go Example                     ║")
+	fmt.Println("╚════════════════════════════════════════════════════════════╝")
+	fmt.Printf("\nLibrary version: %s\n\n", di.Version())
 
 	// Create the root container
 	container := di.NewContainer()
@@ -53,6 +56,10 @@ func main() {
 		log.Fatal("Failed to create container")
 	}
 	defer container.Free()
+	fmt.Println("✓ Created root container")
+
+	// === Register Application Services ===
+	fmt.Println("\n--- Registering Services ---")
 
 	// Register application configuration
 	config := Config{
@@ -77,22 +84,44 @@ func main() {
 	}
 	fmt.Println("✓ Registered DatabaseService")
 
-	// Check what's registered
-	fmt.Printf("\nContainer has %d services\n", container.ServiceCount())
+	// === Check Container State ===
+	fmt.Println("\n--- Container State ---")
+	fmt.Printf("Service count: %d\n", container.ServiceCount())
 	fmt.Printf("Contains 'Config': %v\n", container.Contains("Config"))
 	fmt.Printf("Contains 'DatabaseService': %v\n", container.Contains("DatabaseService"))
-	fmt.Printf("Contains 'NonExistent': %v\n\n", container.Contains("NonExistent"))
+	fmt.Printf("Contains 'NonExistent': %v\n", container.Contains("NonExistent"))
 
-	// Resolve and use the config
+	// === Resolve Services ===
+	fmt.Println("\n--- Resolving Services ---")
+
 	var resolvedConfig Config
 	if err := container.ResolveJSON("Config", &resolvedConfig); err != nil {
 		log.Fatalf("Failed to resolve config: %v", err)
 	}
-	fmt.Printf("Resolved Config: debug=%v, port=%d, log_level=%s\n",
+	fmt.Printf("✓ Resolved Config: debug=%v, port=%d, log_level=%s\n",
 		resolvedConfig.Debug, resolvedConfig.Port, resolvedConfig.LogLevel)
 
-	// Demonstrate scoped containers
-	fmt.Println("\n--- Scoped Container Demo ---")
+	var resolvedDB DatabaseService
+	if err := container.ResolveInto("DatabaseService", &resolvedDB); err != nil {
+		log.Fatalf("Failed to resolve database: %v", err)
+	}
+	fmt.Printf("✓ Resolved DatabaseService: %s/%s (pool: %d)\n",
+		resolvedDB.Host, resolvedDB.Database, resolvedDB.PoolSize)
+
+	// === TryResolve Demo ===
+	fmt.Println("\n--- Optional Resolution ---")
+
+	// TryResolve returns nil for missing services (no error)
+	if data := container.TryResolve("NonExistent"); data == nil {
+		fmt.Println("✓ TryResolve returned nil for missing service")
+	}
+
+	if data := container.TryResolve("Config"); data != nil {
+		fmt.Println("✓ TryResolve returned data for existing service")
+	}
+
+	// === Scoped Containers ===
+	fmt.Println("\n--- Scoped Containers ---")
 
 	// Create a request scope
 	requestScope, err := container.Scope()
@@ -100,6 +129,7 @@ func main() {
 		log.Fatalf("Failed to create scope: %v", err)
 	}
 	defer requestScope.Free()
+	fmt.Println("✓ Created request scope")
 
 	// Register request-specific data
 	user := User{
@@ -132,13 +162,44 @@ func main() {
 	}
 	fmt.Println("✓ Parent container correctly doesn't see CurrentUser")
 
-	// Error handling demo
-	fmt.Println("\n--- Error Handling Demo ---")
+	// Nested scopes
+	nestedScope, err := requestScope.Scope()
+	if err != nil {
+		log.Fatalf("Failed to create nested scope: %v", err)
+	}
+	defer nestedScope.Free()
+	nestedScope.RegisterValue("NestedData", map[string]int{"level": 2})
+	fmt.Println("✓ Created nested scope with data")
+
+	// Nested scope can access all ancestors
+	var configFromNested Config
+	if err := nestedScope.ResolveJSON("Config", &configFromNested); err != nil {
+		log.Fatalf("Failed to resolve from nested: %v", err)
+	}
+	fmt.Printf("✓ Nested scope resolved root Config: log_level=%s\n", configFromNested.LogLevel)
+
+	// === Error Handling Demo ===
+	fmt.Println("\n--- Error Handling ---")
+
 	_, err = container.Resolve("NonExistentService")
 	if err != nil {
 		fmt.Printf("✓ Got expected error: %v\n", err)
+
+		// Check error type
+		if errors.Is(err, di.ErrNotFound) {
+			fmt.Println("✓ Error is ErrNotFound")
+		}
+	}
+
+	// Try to register duplicate
+	err = container.RegisterValue("Config", Config{})
+	if err != nil {
+		fmt.Printf("✓ Got expected error: %v\n", err)
+
+		if errors.Is(err, di.ErrAlreadyRegistered) {
+			fmt.Println("✓ Error is ErrAlreadyRegistered")
+		}
 	}
 
 	fmt.Println("\n✅ All demos completed successfully!")
 }
-

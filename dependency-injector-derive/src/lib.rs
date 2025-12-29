@@ -1,9 +1,11 @@
 //! Derive macros for dependency-injector
 //!
-//! This crate provides the `#[derive(Inject)]` macro for automatic
-//! dependency injection at compile time.
+//! This crate provides derive macros for automatic dependency injection:
 //!
-//! # Example
+//! - `#[derive(Inject)]` - Generate `from_container()` for runtime DI
+//! - `#[derive(Service)]` - Generate `Service` trait impl for compile-time verified DI
+//!
+//! # Inject Example
 //!
 //! ```rust,ignore
 //! use dependency_injector::{Container, Inject};
@@ -34,6 +36,27 @@
 //! container.singleton(Cache { size: 1024 });
 //!
 //! let service = UserService::from_container(&container).unwrap();
+//! ```
+//!
+//! # Service Example (Compile-Time Safety)
+//!
+//! ```rust,ignore
+//! use dependency_injector::{verified::{Service, ServiceProvider}, Container};
+//! use dependency_injector_derive::Service;
+//! use std::sync::Arc;
+//!
+//! #[derive(Clone)]
+//! struct Config { debug: bool }
+//!
+//! #[derive(Clone, Service)]
+//! struct Database {
+//!     #[dep]
+//!     config: Arc<Config>,
+//! }
+//!
+//! let container = Container::new();
+//! container.singleton(Config { debug: true });
+//! container.provide::<Database>();  // Deps verified at compile time!
 //! ```
 
 use proc_macro::TokenStream;
@@ -227,3 +250,303 @@ fn extract_option_arc_inner_type(ty: &Type) -> Option<&Type> {
     None
 }
 
+// =============================================================================
+// Service Derive Macro
+// =============================================================================
+
+/// Types of dep attributes
+enum DepAttr {
+    Required,
+    Optional,
+}
+
+/// Find and parse the #[dep] attribute
+fn find_dep_attr(attrs: &[Attribute]) -> Option<DepAttr> {
+    for attr in attrs {
+        if attr.path().is_ident("dep") {
+            // Check if it has (optional) argument
+            if attr.meta.require_path_only().is_ok() {
+                return Some(DepAttr::Required);
+            }
+
+            // Parse dep(optional)
+            if let Ok(nested) = attr.parse_args::<syn::Ident>() {
+                if nested == "optional" {
+                    return Some(DepAttr::Optional);
+                }
+            }
+
+            // Default to required
+            return Some(DepAttr::Required);
+        }
+    }
+    None
+}
+
+/// Derive macro for the `Service` trait.
+///
+/// Generates a `Service` implementation with compile-time dependency declaration.
+/// This enables type-safe dependency injection with verification at compile time.
+///
+/// # Attributes
+///
+/// - `#[dep]` - Mark a field as a required dependency. Must be `Arc<T>`.
+/// - `#[dep(optional)]` - Mark a field as optional. Must be `Option<Arc<T>>`.
+///
+/// Fields without `#[dep]` use `Default::default()`.
+///
+/// # Generated Code
+///
+/// The macro generates:
+/// - `type Dependencies` - Tuple of all dependency types
+/// - `fn create(deps) -> Self` - Creates the service from dependencies
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use dependency_injector_derive::Service;
+/// use std::sync::Arc;
+///
+/// #[derive(Clone)]
+/// struct Config;
+///
+/// #[derive(Clone)]
+/// struct Database;
+///
+/// #[derive(Clone, Service)]
+/// struct UserService {
+///     #[dep]
+///     config: Arc<Config>,
+///     #[dep]
+///     db: Arc<Database>,
+///     // Non-dep fields use Default
+///     request_count: u64,
+/// }
+///
+/// // Generated implementation:
+/// // impl Service for UserService {
+/// //     type Dependencies = (Arc<Config>, Arc<Database>);
+/// //     fn create((config, db): Self::Dependencies) -> Self {
+/// //         Self { config, db, request_count: Default::default() }
+/// //     }
+/// // }
+/// ```
+#[proc_macro_derive(Service, attributes(dep))]
+pub fn derive_service(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let name = &input.ident;
+    let generics = &input.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    // Only support structs with named fields
+    let fields = match &input.data {
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(fields) => &fields.named,
+            _ => {
+                return syn::Error::new_spanned(
+                    &input,
+                    "Service can only be derived for structs with named fields"
+                )
+                .to_compile_error()
+                .into();
+            }
+        },
+        _ => {
+            return syn::Error::new_spanned(
+                &input,
+                "Service can only be derived for structs"
+            )
+            .to_compile_error()
+            .into();
+        }
+    };
+
+    // Collect dependency types and field initializers
+    let mut dep_types: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut dep_names: Vec<syn::Ident> = Vec::new();
+    let mut field_inits: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut dep_index = 0usize;
+
+    for field in fields.iter() {
+        let field_name = field.ident.as_ref().unwrap();
+        let field_type = &field.ty;
+
+        let dep_attr = find_dep_attr(&field.attrs);
+
+        match dep_attr {
+            Some(DepAttr::Required) => {
+                // Field is Arc<T>, extract T for dependency type
+                if extract_arc_inner_type(field_type).is_some() {
+                    let dep_name = syn::Ident::new(&format!("__dep_{}", dep_index), field_name.span());
+                    dep_types.push(quote! { #field_type });
+                    dep_names.push(dep_name.clone());
+                    field_inits.push(quote! { #field_name: #dep_name });
+                    dep_index += 1;
+                } else {
+                    return syn::Error::new_spanned(
+                        field_type,
+                        "Fields marked with #[dep] must have type Arc<T>"
+                    )
+                    .to_compile_error()
+                    .into();
+                }
+            }
+            Some(DepAttr::Optional) => {
+                // Field is Option<Arc<T>>
+                if extract_option_arc_inner_type(field_type).is_some() {
+                    let dep_name = syn::Ident::new(&format!("__dep_{}", dep_index), field_name.span());
+                    dep_types.push(quote! { #field_type });
+                    dep_names.push(dep_name.clone());
+                    field_inits.push(quote! { #field_name: #dep_name });
+                    dep_index += 1;
+                } else {
+                    return syn::Error::new_spanned(
+                        field_type,
+                        "Fields marked with #[dep(optional)] must have type Option<Arc<T>>"
+                    )
+                    .to_compile_error()
+                    .into();
+                }
+            }
+            None => {
+                // Non-dependency field - use Default
+                field_inits.push(quote! {
+                    #field_name: ::std::default::Default::default()
+                });
+            }
+        }
+    }
+
+    // Generate the Dependencies type and create function
+    let (deps_type, deps_pattern) = match dep_types.len() {
+        0 => (quote! { () }, quote! { _ }),
+        1 => {
+            let ty = &dep_types[0];
+            let name = &dep_names[0];
+            (quote! { #ty }, quote! { #name })
+        }
+        _ => {
+            let types = &dep_types;
+            let names = &dep_names;
+            (quote! { (#(#types),*) }, quote! { (#(#names),*) })
+        }
+    };
+
+    // Generate the implementation
+    let expanded = quote! {
+        impl #impl_generics ::dependency_injector::verified::Service for #name #ty_generics #where_clause {
+            type Dependencies = #deps_type;
+
+            fn create(#deps_pattern: Self::Dependencies) -> Self {
+                Self {
+                    #(#field_inits),*
+                }
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+// =============================================================================
+// TypedRequire Derive Macro
+// =============================================================================
+
+/// Derive macro for the `Require` trait (type-level dependencies).
+///
+/// Generates a `Require` implementation that declares dependencies
+/// at the type level for use with `TypedBuilder`.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use dependency_injector_derive::TypedRequire;
+/// use std::sync::Arc;
+///
+/// #[derive(Clone)]
+/// struct Database;
+///
+/// #[derive(Clone)]
+/// struct Cache;
+///
+/// #[derive(Clone, TypedRequire)]
+/// struct UserService {
+///     #[dep]
+///     db: Arc<Database>,
+///     #[dep]
+///     cache: Arc<Cache>,
+/// }
+///
+/// // Generated:
+/// // impl Require for UserService {
+/// //     type Dependencies = Has<Database, Has<Cache, Empty>>;
+/// // }
+/// ```
+#[proc_macro_derive(TypedRequire, attributes(dep))]
+pub fn derive_typed_require(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let name = &input.ident;
+    let generics = &input.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    // Only support structs with named fields
+    let fields = match &input.data {
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(fields) => &fields.named,
+            _ => {
+                return syn::Error::new_spanned(
+                    &input,
+                    "TypedRequire can only be derived for structs with named fields"
+                )
+                .to_compile_error()
+                .into();
+            }
+        },
+        _ => {
+            return syn::Error::new_spanned(
+                &input,
+                "TypedRequire can only be derived for structs"
+            )
+            .to_compile_error()
+            .into();
+        }
+    };
+
+    // Collect dependency types (only Arc<T> fields with #[dep])
+    let mut inner_types: Vec<&Type> = Vec::new();
+
+    for field in fields.iter() {
+        let field_type = &field.ty;
+        let dep_attr = find_dep_attr(&field.attrs);
+
+        if let Some(DepAttr::Required) = dep_attr {
+            if let Some(inner) = extract_arc_inner_type(field_type) {
+                inner_types.push(inner);
+            } else {
+                return syn::Error::new_spanned(
+                    field_type,
+                    "Fields marked with #[dep] must have type Arc<T>"
+                )
+                .to_compile_error()
+                .into();
+            }
+        }
+    }
+
+    // Build the type-level list: Has<T1, Has<T2, ... Has<Tn, Empty>>>
+    let deps_type = inner_types.iter().rev().fold(
+        quote! { ::dependency_injector::typed::Empty },
+        |acc, ty| quote! { ::dependency_injector::typed::Has<#ty, #acc> }
+    );
+
+    // Generate the implementation
+    let expanded = quote! {
+        impl #impl_generics ::dependency_injector::typed::Require for #name #ty_generics #where_clause {
+            type Dependencies = #deps_type;
+        }
+    };
+
+    TokenStream::from(expanded)
+}

@@ -1,0 +1,299 @@
+---
+description: CI/CD workflows and automation for the dependency-injector project
+globs: [".github/workflows/**/*", "scripts/**/*"]
+alwaysApply: false
+---
+
+# CI/CD Agent
+
+You are an expert in GitHub Actions and CI/CD automation.
+
+## Workflow Structure
+
+```
+.github/
+└── workflows/
+    ├── ci.yml          # Continuous Integration
+    ├── release.yml     # Release automation
+    ├── docs.yml        # Documentation deployment
+    └── bench.yml       # Performance benchmarks
+```
+
+## Continuous Integration (`ci.yml`)
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features
+
+      - name: Run tests
+        run: cargo test --all-features
+
+      - name: Run doc tests
+        run: cargo test --doc
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate coverage
+        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+
+  ffi-bindings:
+    name: FFI Bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Build native library
+        run: cargo build --release
+
+      - name: Test Node.js bindings
+        working-directory: ffi/nodejs
+        run: |
+          corepack enable
+          pnpm install
+          pnpm test
+
+      - name: Test Python bindings
+        working-directory: ffi/python
+        run: |
+          pip install -e ".[dev]"
+          pytest
+
+      - name: Test Go bindings
+        working-directory: ffi/go
+        run: go test ./...
+```
+
+## Release Workflow (`release.yml`)
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Verify version matches tag
+        run: |
+          CARGO_VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "dependency-injector") | .version')
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "Version mismatch: Cargo.toml=$CARGO_VERSION, tag=$TAG_VERSION"
+            exit 1
+          fi
+
+      - name: Run tests
+        run: cargo test --all-features
+
+      - name: Publish to crates.io
+        run: |
+          cargo publish -p dependency-injector-derive
+          sleep 30  # Wait for crates.io to index
+          cargo publish -p dependency-injector
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+```
+
+## Documentation Workflow (`docs.yml`)
+
+```yaml
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+jobs:
+  deploy:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: docs
+        run: pnpm install
+
+      - name: Build documentation
+        working-directory: docs
+        run: pnpm build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/dist/docs/browser
+```
+
+## Benchmark Workflow (`bench.yml`)
+
+```yaml
+name: Benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Run benchmarks
+        run: cargo bench --bench container_bench -- --output-format bencher | tee output.txt
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'cargo'
+          output-file-path: output.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: '150%'
+          comment-on-alert: true
+          fail-on-alert: true
+```
+
+## Required Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `CARGO_REGISTRY_TOKEN` | crates.io publish token |
+| `NPM_TOKEN` | npm publish token |
+| `PYPI_API_TOKEN` | PyPI publish token |
+| `NUGET_API_KEY` | NuGet publish key |
+
+## Branch Protection
+
+Configure for `main` branch:
+
+- ✅ Require status checks before merging
+- ✅ Require branches to be up to date
+- ✅ Required checks: `test`, `coverage`, `ffi-bindings`
+- ✅ Require linear history
+- ✅ Do not allow bypassing above settings
+
+## Automation Scripts
+
+### `scripts/deploy.sh`
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Deploy Rust crates to crates.io
+./scripts/deploy.sh [--dry-run]
+```
+
+### `scripts/deploy-ffi.sh`
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Deploy FFI packages
+./scripts/deploy-ffi.sh [nodejs|python|csharp|go] [--dry-run]
+```
+
+## Local Workflow Testing
+
+Use `act` to test workflows locally:
+
+```bash
+# Install act
+brew install act  # macOS
+
+# Run CI workflow
+act push
+
+# Run specific job
+act -j test
+
+# With secrets
+act push --secret-file .secrets
+```

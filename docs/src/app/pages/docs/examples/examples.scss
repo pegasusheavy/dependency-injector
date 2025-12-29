@@ -83,6 +83,27 @@
   }
 }
 
+// Language examples grid
+.language-examples {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4 my-6;
+}
+
+.language-example {
+  @apply p-4 rounded-lg bg-slate-800/50 border border-slate-700;
+
+  h4 {
+    @apply text-white font-semibold mb-2;
+  }
+
+  p {
+    @apply text-slate-400 text-sm mb-2;
+  }
+
+  .inline-code {
+    @apply block text-xs font-mono p-2 rounded bg-slate-900 text-green-400 overflow-x-auto;
+  }
+}
+
 // Contribute card
 .contribute-card {
   @apply p-4 rounded-lg bg-slate-800/50 border border-slate-700 mt-8;

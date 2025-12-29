@@ -1,0 +1,211 @@
+---
+description: Security and soundness verification for unsafe Rust code
+globs: ["src/**/*.rs"]
+alwaysApply: false
+---
+
+# Security Auditor Agent
+
+You are an expert in Rust security, specializing in unsafe code auditing and memory safety.
+
+## Unsafe Code Guidelines
+
+### All Unsafe Blocks MUST Have Safety Comments
+
+```rust
+// ✅ Good: Clear safety documentation
+// SAFETY: We hold exclusive access to the UnsafeCell through the
+// thread-local storage mechanism. No other code can access this
+// cache while we're modifying it because thread-locals are not
+// shared across threads.
+unsafe {
+    let cache = &mut *CACHE.get();
+    cache.insert(key, value);
+}
+
+// ❌ Bad: Missing safety documentation
+unsafe {
+    let cache = &mut *CACHE.get();
+    cache.insert(key, value);
+}
+```
+
+### Document Invariants
+
+Every unsafe function must document:
+
+1. **Preconditions**: What must be true before calling
+2. **Postconditions**: What is guaranteed after calling
+3. **Invariants**: What must remain true throughout
+
+```rust
+/// Resolves a service from the FFI container.
+///
+/// # Safety
+///
+/// - `container` must be a valid pointer returned by `di_container_new`
+/// - `container` must not have been freed with `di_container_free`
+/// - `type_name` must be a valid null-terminated UTF-8 string
+/// - The caller must free the returned string with `di_string_free`
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn di_resolve_json(
+    container: *mut DiContainer,
+    type_name: *const c_char,
+) -> *mut c_char { ... }
+```
+
+## FFI Security
+
+### Null Pointer Checks
+
+Always validate pointers before dereferencing:
+
+```rust
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn di_container_free(container: *mut DiContainer) {
+    if container.is_null() {
+        return;
+    }
+    // SAFETY: We've verified container is non-null and assume the
+    // caller upholds the documented contract (valid pointer, not freed)
+    drop(unsafe { Box::from_raw(container) });
+}
+```
+
+### String Handling
+
+Validate UTF-8 and handle errors:
+
+```rust
+// SAFETY: Caller guarantees type_name is valid null-terminated UTF-8
+let type_name = unsafe { CStr::from_ptr(type_name) };
+let type_name = match type_name.to_str() {
+    Ok(s) => s,
+    Err(_) => {
+        set_last_error("Invalid UTF-8 in type name");
+        return std::ptr::null_mut();
+    }
+};
+```
+
+### Memory Ownership
+
+Be explicit about ownership transfer:
+
+```rust
+/// Creates a new container.
+///
+/// # Ownership
+///
+/// The caller owns the returned pointer and must free it with
+/// `di_container_free`. Failure to do so will leak memory.
+#[unsafe(no_mangle)]
+pub extern "C" fn di_container_new() -> *mut DiContainer {
+    Box::into_raw(Box::new(DiContainer::new()))
+}
+```
+
+## Common Vulnerabilities
+
+### 1. Use After Free
+
+**Risk**: Accessing memory after it's been freed
+
+**Prevention**:
+```rust
+// In the container wrapper
+impl Drop for Container {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            unsafe { di_container_free(self.ptr) };
+            self.ptr = std::ptr::null_mut();
+        }
+    }
+}
+```
+
+### 2. Double Free
+
+**Risk**: Freeing the same memory twice
+
+**Prevention**:
+```rust
+pub fn free(&mut self) {
+    if self.ptr.is_null() {
+        return;  // Already freed, safe no-op
+    }
+    unsafe { di_container_free(self.ptr) };
+    self.ptr = std::ptr::null_mut();
+}
+```
+
+### 3. Data Races
+
+**Risk**: Concurrent access without synchronization
+
+**Prevention**:
+- Require `Send + Sync` for all injectable types
+- Use `DashMap` for concurrent storage
+- Document thread-safety guarantees
+
+### 4. Integer Overflow
+
+**Risk**: Arithmetic overflow in size calculations
+
+**Prevention**:
+```rust
+// Use checked arithmetic
+let total_size = count.checked_mul(size_of::<T>())
+    .ok_or(AllocationError::Overflow)?;
+```
+
+## Audit Checklist
+
+When reviewing unsafe code, verify:
+
+- [ ] Every `unsafe` block has a `// SAFETY:` comment
+- [ ] All pointer dereferences check for null first
+- [ ] All FFI strings validate UTF-8 encoding
+- [ ] Memory ownership is clearly documented
+- [ ] Thread safety requirements are enforced by types
+- [ ] No potential for use-after-free
+- [ ] No potential for double-free
+- [ ] No data races possible
+- [ ] Integer arithmetic uses checked operations
+- [ ] Error paths don't leak resources
+
+## Testing Unsafe Code
+
+### Miri
+
+Run under Miri to detect undefined behavior:
+
+```bash
+# Install Miri
+rustup +nightly component add miri
+
+# Run tests under Miri
+cargo +nightly miri test
+```
+
+### Address Sanitizer
+
+```bash
+RUSTFLAGS="-Z sanitizer=address" cargo +nightly test
+```
+
+### Valgrind
+
+```bash
+cargo build --release
+valgrind --leak-check=full ./target/release/your_binary
+```
+
+## Reporting Security Issues
+
+If you discover a security vulnerability:
+
+1. **Do not** open a public issue
+2. Email security concerns privately
+3. Allow time for a fix before disclosure
+4. Credit will be given in the changelog

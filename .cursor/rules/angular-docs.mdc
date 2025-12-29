@@ -1,0 +1,232 @@
+---
+description: Angular documentation site development and maintenance
+globs: ["docs/**/*.ts", "docs/**/*.html", "docs/**/*.scss"]
+alwaysApply: false
+---
+
+# Angular Documentation Agent
+
+You are an expert in Angular development for the documentation website.
+
+## Project Structure
+
+```
+docs/
+├── src/
+│   ├── app/
+│   │   ├── pages/           # Route components
+│   │   │   ├── home/
+│   │   │   ├── docs/
+│   │   │   │   ├── getting-started/
+│   │   │   │   ├── api/
+│   │   │   │   ├── examples/
+│   │   │   │   └── ffi/
+│   │   ├── components/      # Shared components
+│   │   │   ├── header/
+│   │   │   ├── footer/
+│   │   │   └── code-block/
+│   │   └── services/        # Angular services
+│   │       └── seo.service.ts
+│   ├── styles/              # Global SCSS
+│   └── index.html           # Entry point with SEO
+├── public/                  # Static assets
+│   ├── sitemap.xml
+│   ├── robots.txt
+│   └── site.webmanifest
+└── angular.json             # Angular config
+```
+
+## Conventions
+
+### Component Structure
+
+Use standalone components with signal-based state:
+
+```typescript
+import { Component, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-feature',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './feature.html',
+  styleUrl: './feature.scss'
+})
+export class FeatureComponent {
+  readonly isLoading = signal(false);
+  readonly data = signal<Data[]>([]);
+
+  async loadData() {
+    this.isLoading.set(true);
+    try {
+      const result = await this.dataService.fetch();
+      this.data.set(result);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+}
+```
+
+### Routing
+
+Define routes with SEO-friendly titles:
+
+```typescript
+export const routes: Routes = [
+  {
+    path: '',
+    component: HomeComponent,
+    title: 'dependency-injector - Fast Rust DI Container'
+  },
+  {
+    path: 'docs/getting-started',
+    component: GettingStartedComponent,
+    title: 'Getting Started - dependency-injector'
+  }
+];
+```
+
+### SEO Service
+
+Use the SEO service for dynamic metadata:
+
+```typescript
+@Component({ ... })
+export class PageComponent implements OnInit {
+  constructor(private seo: SeoService) {}
+
+  ngOnInit() {
+    this.seo.updateMetaTags({
+      title: 'Page Title - dependency-injector',
+      description: 'Page description for search engines',
+      keywords: ['rust', 'di', 'dependency injection'],
+      url: 'https://example.com/page'
+    });
+  }
+}
+```
+
+## Styling
+
+### SCSS Variables
+
+Use CSS custom properties for theming:
+
+```scss
+:root {
+  --color-primary: #f97316;
+  --color-background: #0a0a0a;
+  --color-text: #fafafa;
+  --color-muted: #a3a3a3;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+.component {
+  color: var(--color-text);
+  background: var(--color-background);
+}
+```
+
+### Code Blocks
+
+Style code examples consistently:
+
+```scss
+.code-block {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #333;
+  }
+
+  &__copy-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  &:hover &__copy-btn {
+    opacity: 1;
+  }
+}
+```
+
+## FontAwesome Icons
+
+Import icons in `app.config.ts`:
+
+```typescript
+import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
+import { faRust, faNodeJs, faPython, faGolang } from '@fortawesome/free-brands-svg-icons';
+
+export function initializeIcons(library: FaIconLibrary) {
+  library.addIcons(faRust, faNodeJs, faPython, faGolang);
+}
+```
+
+## Performance
+
+### Lazy Loading
+
+Lazy load documentation pages:
+
+```typescript
+{
+  path: 'docs/api',
+  loadComponent: () => import('./pages/docs/api/api').then(m => m.ApiComponent)
+}
+```
+
+### Image Optimization
+
+Use modern formats and lazy loading:
+
+```html
+<img
+  src="/assets/diagram.webp"
+  alt="Architecture diagram"
+  loading="lazy"
+  width="800"
+  height="600"
+>
+```
+
+## Testing
+
+Use Vitest for component testing:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/angular';
+import { HeaderComponent } from './header';
+
+describe('HeaderComponent', () => {
+  it('renders navigation links', async () => {
+    await render(HeaderComponent);
+
+    expect(screen.getByText('Documentation')).toBeTruthy();
+    expect(screen.getByText('Examples')).toBeTruthy();
+  });
+});
+```
+
+## Build & Deploy
+
+```bash
+# Development server
+cd docs && ng serve
+
+# Production build
+ng build --configuration production
+
+# Preview production build
+npx serve dist/docs/browser
+```

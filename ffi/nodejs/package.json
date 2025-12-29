@@ -1,16 +1,23 @@
 {
   "name": "@pegasusheavy/dependency-injector",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Node.js bindings for the high-performance Rust dependency injection container",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
+  "packageManager": "pnpm@9.15.2",
   "scripts": {
-    "build": "tsc",
+    "preinstall": "npx only-allow pnpm",
+    "build": "swc src -d dist --strip-leading-paths && tsc --emitDeclarationOnly",
+    "build:swc": "swc src -d dist --strip-leading-paths",
+    "build:types": "tsc --emitDeclarationOnly",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "example": "tsx examples/basic.ts",
     "lint": "eslint src --ext .ts",
-    "prepublishOnly": "npm run build"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "keywords": [
     "dependency-injection",
@@ -28,15 +35,17 @@
     "url": "https://github.com/pegasusheavy/dependency-injector"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
   },
   "dependencies": {
-    "ffi-napi": "^4.0.3",
-    "ref-napi": "^3.0.3",
-    "ref-struct-di": "^1.1.1"
+    "koffi": "^2.9.0"
   },
   "devDependencies": {
+    "@swc/cli": "^0.5.2",
+    "@swc/core": "^1.10.4",
     "@types/node": "^20.10.0",
+    "only-allow": "^1.2.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0",
     "vitest": "^1.1.0"
@@ -46,4 +55,3 @@
     "README.md"
   ]
 }
-

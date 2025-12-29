@@ -13,10 +13,17 @@ Example:
     >>> print(config["port"])  # 8080
     >>>
     >>> container.free()
+
+Or using context manager:
+    >>> from dependency_injector import Container
+    >>>
+    >>> with Container() as container:
+    ...     container.register("Config", {"debug": True})
+    ...     config = container.resolve("Config")
+    ...     print(config)
 """
 
 from .container import Container, DIError, ErrorCode
 
 __all__ = ["Container", "DIError", "ErrorCode"]
-__version__ = "0.2.1"
-
+__version__ = "0.2.2"

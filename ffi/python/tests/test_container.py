@@ -14,11 +14,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dependency_injector import Container, DIError, ErrorCode
-from dependency_injector.container import CachingContainer
 
 
 class TestContainer:
-    """Tests for the basic Container class."""
+    """Tests for the Container class."""
 
     def test_create_container(self):
         """Should create a new container."""
@@ -133,18 +132,12 @@ class TestContainer:
         assert exc_info.value.code == ErrorCode.INVALID_ARGUMENT
 
 
-class TestCachingContainer:
-    """Tests for the CachingContainer class with full resolve support."""
-
-    def test_create_container(self):
-        """Should create a new container."""
-        container = CachingContainer()
-        assert container.service_count == 0
-        container.free()
+class TestContainerResolve:
+    """Tests for Container resolve functionality."""
 
     def test_register_and_resolve(self):
         """Should register and resolve a service."""
-        container = CachingContainer()
+        container = Container()
         container.register("Config", {"debug": True, "port": 8080})
         config = container.resolve("Config")
         assert config["debug"] is True
@@ -153,7 +146,7 @@ class TestCachingContainer:
 
     def test_resolve_list(self):
         """Should resolve list values."""
-        container = CachingContainer()
+        container = Container()
         container.register("List", [1, 2, 3])
         result = container.resolve("List")
         assert result == [1, 2, 3]
@@ -161,7 +154,7 @@ class TestCachingContainer:
 
     def test_resolve_string(self):
         """Should resolve string values."""
-        container = CachingContainer()
+        container = Container()
         container.register("Message", "Hello, World!")
         result = container.resolve("Message")
         assert result == "Hello, World!"
@@ -169,7 +162,7 @@ class TestCachingContainer:
 
     def test_resolve_nested(self):
         """Should resolve nested objects."""
-        container = CachingContainer()
+        container = Container()
         container.register("Nested", {
             "level1": {
                 "level2": {
@@ -183,34 +176,84 @@ class TestCachingContainer:
 
     def test_resolve_not_found_raises(self):
         """Should raise for non-existent service."""
-        container = CachingContainer()
+        container = Container()
         with pytest.raises(DIError) as exc_info:
             container.resolve("Missing")
         assert exc_info.value.code == ErrorCode.NOT_FOUND
         container.free()
 
-    def test_scope_resolve(self):
-        """Should resolve in child scope."""
-        container = CachingContainer()
+    def test_try_resolve_returns_value(self):
+        """Should return value with try_resolve."""
+        container = Container()
+        container.register("Config", {"debug": True})
+        config = container.try_resolve("Config")
+        assert config is not None
+        assert config["debug"] is True
+        container.free()
+
+    def test_try_resolve_returns_none_for_missing(self):
+        """Should return None for missing service with try_resolve."""
+        container = Container()
+        result = container.try_resolve("Missing")
+        assert result is None
+        container.free()
+
+    def test_resolve_same_data_multiple_times(self):
+        """Should return same data on multiple resolves."""
+        container = Container()
+        container.register("Config", {"id": 42})
+        first = container.resolve("Config")
+        second = container.resolve("Config")
+        assert first["id"] == second["id"]
+        container.free()
+
+
+class TestScopedContainerResolve:
+    """Tests for scoped container resolve functionality."""
+
+    def test_scope_resolve_parent(self):
+        """Should resolve parent services in child scope."""
+        container = Container()
         container.register("Parent", {"from": "parent"})
+        child = container.scope()
+
+        # Child can resolve parent service
+        parent_data = child.resolve("Parent")
+        assert parent_data == {"from": "parent"}
+
+        child.free()
+        container.free()
+
+    def test_scope_resolve_child(self):
+        """Should resolve child services in child scope."""
+        container = Container()
         child = container.scope()
         child.register("Child", {"from": "child"})
 
-        # Child can resolve both
-        assert child.resolve("Parent") == {"from": "parent"}
-        assert child.resolve("Child") == {"from": "child"}
+        # Child can resolve its own service
+        child_data = child.resolve("Child")
+        assert child_data == {"from": "child"}
 
-        # Parent can only resolve parent
-        assert container.resolve("Parent") == {"from": "parent"}
-        with pytest.raises(DIError):
+        child.free()
+        container.free()
+
+    def test_parent_cannot_resolve_child(self):
+        """Should not resolve child services in parent scope."""
+        container = Container()
+        child = container.scope()
+        child.register("Child", {"from": "child"})
+
+        # Parent cannot resolve child service
+        with pytest.raises(DIError) as exc_info:
             container.resolve("Child")
+        assert exc_info.value.code == ErrorCode.NOT_FOUND
 
         child.free()
         container.free()
 
     def test_nested_scopes(self):
-        """Should support nested scopes."""
-        root = CachingContainer()
+        """Should support nested scopes with resolve."""
+        root = Container()
         root.register("Root", {"level": 0})
 
         level1 = root.scope()
@@ -230,7 +273,7 @@ class TestCachingContainer:
 
     def test_context_manager_with_resolve(self):
         """Should work as context manager with resolve."""
-        with CachingContainer() as container:
+        with Container() as container:
             container.register("Test", {"value": 42})
             result = container.resolve("Test")
             assert result["value"] == 42
@@ -241,7 +284,7 @@ class TestErrorHandling:
 
     def test_error_code_not_found(self):
         """Should have correct error code for not found."""
-        container = CachingContainer()
+        container = Container()
         try:
             container.resolve("Missing")
             pytest.fail("Should have raised")
@@ -269,4 +312,3 @@ class TestErrorHandling:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

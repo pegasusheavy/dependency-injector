@@ -56,3 +56,32 @@ Desktop.ini
 .env.local
 
 benchmark-results.txt
+
+# Node.js
+node_modules/
+dist/
+*.tsbuildinfo
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+
+# C# / .NET
+bin/
+obj/
+*.nupkg
+
+# Go
+*.exe
+*.test
+
+# Angular
+.angular/
+docs/dist/

@@ -1,9 +1,37 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace DependencyInjector.Native
 {
+    /// <summary>
+    /// Error codes returned by the native library.
+    /// </summary>
+    public enum DiErrorCode : int
+    {
+        /// <summary>Operation succeeded.</summary>
+        Ok = 0,
+        /// <summary>Service not found.</summary>
+        NotFound = 1,
+        /// <summary>Invalid argument (null pointer, invalid UTF-8, etc.).</summary>
+        InvalidArgument = 2,
+        /// <summary>Service already registered.</summary>
+        AlreadyRegistered = 3,
+        /// <summary>Internal error.</summary>
+        InternalError = 4,
+        /// <summary>Serialization/deserialization error.</summary>
+        SerializationError = 5,
+    }
+
+    /// <summary>
+    /// Result type for resolve operations.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct DiResult
+    {
+        public DiErrorCode Code;
+        public IntPtr Service;
+    }
+
     /// <summary>
     /// Native P/Invoke bindings to the Rust dependency-injector library.
     /// </summary>
@@ -11,44 +39,143 @@ namespace DependencyInjector.Native
     {
         private const string LibraryName = "dependency_injector";
 
+        // ============================================================================
+        // Container Lifecycle
+        // ============================================================================
+
+        /// <summary>
+        /// Create a new dependency injection container.
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr di_container_new();
 
+        /// <summary>
+        /// Free a container and all its resources.
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void di_container_free(IntPtr container);
 
+        /// <summary>
+        /// Create a child scope from a container.
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int di_register_singleton(
+        public static extern IntPtr di_container_scope(IntPtr container);
+
+        // ============================================================================
+        // Service Registration
+        // ============================================================================
+
+        /// <summary>
+        /// Register a singleton service with raw byte data.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern DiErrorCode di_register_singleton(
             IntPtr container,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeId,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeName,
+            byte[] data,
+            UIntPtr dataLen);
+
+        /// <summary>
+        /// Register a singleton service with a JSON string.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern DiErrorCode di_register_singleton_json(
+            IntPtr container,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeName,
             [MarshalAs(UnmanagedType.LPUTF8Str)] string jsonData);
 
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int di_register_transient(
-            IntPtr container,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeId,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string jsonData);
+        // ============================================================================
+        // Service Resolution
+        // ============================================================================
 
+        /// <summary>
+        /// Resolve a service by type name (returns DiResult struct).
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr di_resolve(
+        public static extern DiResult di_resolve(
             IntPtr container,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeId);
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeName);
 
+        /// <summary>
+        /// Resolve a service and return its data as a JSON string.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr di_resolve_json(
+            IntPtr container,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeName);
+
+        /// <summary>
+        /// Check if a service is registered.
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int di_contains(
             IntPtr container,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeId);
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeName);
 
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int di_remove(
-            IntPtr container,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string typeId);
+        // ============================================================================
+        // Service Data Access
+        // ============================================================================
 
+        /// <summary>
+        /// Get the data pointer from a service handle.
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr di_create_scope(IntPtr container);
+        public static extern IntPtr di_service_data(IntPtr service);
 
+        /// <summary>
+        /// Get the data length from a service handle.
+        /// </summary>
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void di_free_string(IntPtr str);
+        public static extern UIntPtr di_service_data_len(IntPtr service);
+
+        /// <summary>
+        /// Get the type name from a service handle.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr di_service_type_name(IntPtr service);
+
+        /// <summary>
+        /// Free a service handle.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void di_service_free(IntPtr service);
+
+        // ============================================================================
+        // Error Handling
+        // ============================================================================
+
+        /// <summary>
+        /// Get the last error message (thread-local).
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr di_error_message();
+
+        /// <summary>
+        /// Clear the last error message.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void di_error_clear();
+
+        /// <summary>
+        /// Free a string returned by the library.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void di_string_free(IntPtr str);
+
+        // ============================================================================
+        // Utility Functions
+        // ============================================================================
+
+        /// <summary>
+        /// Get the library version.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr di_version();
+
+        /// <summary>
+        /// Get the number of registered services in a container.
+        /// </summary>
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long di_service_count(IntPtr container);
     }
 }
-

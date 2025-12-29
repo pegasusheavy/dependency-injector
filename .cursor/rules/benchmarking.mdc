@@ -1,0 +1,203 @@
+---
+description: Benchmarking and performance analysis for the dependency-injector library
+globs: ["benches/**/*.rs", "examples/memory_profiler.rs"]
+alwaysApply: false
+---
+
+# Benchmarking Agent
+
+You are an expert in Rust performance analysis and benchmarking.
+
+## Benchmark Suite
+
+### Running Benchmarks
+
+```bash
+# Full benchmark suite
+cargo bench
+
+# Specific benchmark group
+cargo bench --bench container_bench
+
+# Comparison with other DI libraries
+cargo bench --bench comparison_bench
+
+# With specific filter
+cargo bench -- "singleton"
+```
+
+### Benchmark Categories
+
+| Benchmark | Target | Description |
+|-----------|--------|-------------|
+| `singleton_resolve` | < 10ns | Cached singleton access |
+| `singleton_resolve_cold` | < 50ns | First-time resolution |
+| `transient_resolve` | < 50ns | Factory invocation |
+| `contains_check` | < 5ns | Type existence check |
+| `scope_creation` | < 100ns | Child scope creation |
+
+## Writing Benchmarks
+
+### Criterion Setup
+
+```rust
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use dependency_injector::Container;
+
+fn singleton_benchmark(c: &mut Criterion) {
+    let container = Container::new();
+    container.singleton(Config::default());
+
+    // Warm the cache
+    let _ = container.get::<Config>();
+
+    c.bench_function("singleton_resolve", |b| {
+        b.iter(|| {
+            black_box(container.get::<Config>())
+        })
+    });
+}
+
+criterion_group!(benches, singleton_benchmark);
+criterion_main!(benches);
+```
+
+### Best Practices
+
+1. **Use `black_box`** to prevent dead code elimination
+2. **Warm caches** before measuring hot paths
+3. **Isolate setup** from measured code
+4. **Test realistic scenarios** not just micro-benchmarks
+5. **Compare against baseline** (previous version or competitors)
+
+## Memory Profiling
+
+### Using dhat
+
+```bash
+# Run memory profiler
+cargo run --example memory_profiler --features dhat-heap
+```
+
+Analyzes:
+- Total allocations
+- Peak memory usage
+- Allocation hot spots
+
+### Using Valgrind/Massif
+
+```bash
+# Build with debug symbols
+cargo build --example memory_profiler --profile profiling
+
+# Run with Massif
+valgrind --tool=massif ./target/profiling/examples/memory_profiler
+
+# Visualize
+ms_print massif.out.*
+```
+
+## CPU Profiling
+
+### Using perf
+
+```bash
+# Record profile
+perf record -g cargo bench --bench container_bench -- --profile-time 10
+
+# View report
+perf report
+```
+
+### Using Flamegraph
+
+```bash
+# Install flamegraph
+cargo install flamegraph
+
+# Generate flamegraph
+cargo flamegraph --bench container_bench -- --bench
+```
+
+## Comparison Benchmarks
+
+Compare against other Rust DI libraries:
+
+```rust
+fn comparison_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("singleton_resolve");
+
+    // Our library
+    group.bench_function("dependency-injector", |b| {
+        let container = Container::new();
+        container.singleton(Service::new());
+        b.iter(|| container.get::<Service>())
+    });
+
+    // Competitor
+    group.bench_function("shaku", |b| {
+        // shaku setup
+        b.iter(|| /* shaku resolution */)
+    });
+
+    group.finish();
+}
+```
+
+## Performance Regression Testing
+
+### CI Integration
+
+```yaml
+# .github/workflows/bench.yml
+- name: Run benchmarks
+  run: cargo bench --bench container_bench -- --save-baseline main
+
+- name: Compare with baseline
+  run: cargo bench --bench container_bench -- --baseline main
+```
+
+### Local Comparison
+
+```bash
+# Save baseline
+cargo bench -- --save-baseline before
+
+# Make changes...
+
+# Compare
+cargo bench -- --baseline before
+```
+
+## Optimization Techniques
+
+### Hot Path Optimizations
+
+1. **Thread-local cache**: Avoid atomic operations
+2. **Inline critical functions**: `#[inline]` or `#[inline(always)]`
+3. **Avoid allocations**: Pre-allocate, use stack
+4. **Minimize indirection**: Direct field access
+
+### When to Optimize
+
+1. **Measure first**: Don't guess at bottlenecks
+2. **Profile**: Use flamegraph to find hot spots
+3. **Benchmark**: Verify improvement with Criterion
+4. **Document**: Explain why optimization is needed
+
+### Anti-Patterns
+
+- ❌ Premature optimization
+- ❌ Optimizing cold paths
+- ❌ Breaking API for marginal gains
+- ❌ Micro-optimizations without measurement
+
+## Reporting Results
+
+When sharing benchmark results, include:
+
+1. **Hardware**: CPU model, RAM, OS
+2. **Rust version**: `rustc --version`
+3. **Build profile**: Debug vs Release
+4. **Methodology**: Warm-up iterations, sample size
+5. **Statistical significance**: Confidence intervals

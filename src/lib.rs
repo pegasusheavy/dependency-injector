@@ -113,6 +113,8 @@ pub mod logging;
 mod provider;
 mod scope;
 mod storage;
+pub mod typed;
+pub mod verified;
 
 // Re-export FrozenStorage when perfect-hash feature is enabled
 #[cfg(feature = "perfect-hash")]
@@ -130,7 +132,7 @@ pub use tracing::{debug, error, info, trace, warn};
 
 // Re-export derive macros when feature is enabled
 #[cfg(feature = "derive")]
-pub use dependency_injector_derive::Inject;
+pub use dependency_injector_derive::{Inject, Service, TypedRequire};
 
 // Re-export for convenience
 pub use std::sync::Arc;
@@ -143,8 +145,12 @@ pub mod prelude {
     };
     pub use std::sync::Arc;
 
+    // Compile-time safety types
+    pub use crate::typed::{TypedBuilder, TypedContainer, Has, HasType, HasService, DeclaresDeps, Reg, DepsPresent};
+    pub use crate::verified::{Service, ServiceProvider, ServiceModule, Resolvable};
+
     #[cfg(feature = "derive")]
-    pub use crate::Inject;
+    pub use crate::{Inject, Service as ServiceDerive, TypedRequire};
 }
 
 #[cfg(test)]

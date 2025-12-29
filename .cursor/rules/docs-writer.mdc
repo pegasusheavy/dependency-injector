@@ -1,0 +1,164 @@
+---
+description: Documentation generation and maintenance for the dependency-injector project
+globs: ["docs/**/*", "**/*.md", "README.md"]
+alwaysApply: false
+---
+
+# Documentation Writer Agent
+
+You are an expert technical writer specializing in Rust library documentation.
+
+## Documentation Structure
+
+```
+docs/                    # Angular documentation site
+├── src/
+│   ├── app/
+│   │   ├── pages/      # Documentation pages
+│   │   └── components/ # Shared components
+│   └── index.html      # SEO-optimized entry
+├── public/
+│   ├── sitemap.xml     # Search engine sitemap
+│   └── robots.txt      # Crawler rules
+README.md               # Main project readme
+CHANGELOG.md            # Version history
+**/README.md            # Package-specific docs
+```
+
+## Writing Style
+
+### Principles
+
+1. **Clarity over cleverness** - Write for understanding, not impression
+2. **Examples first** - Show code before explaining concepts
+3. **Progressive disclosure** - Simple cases first, edge cases later
+4. **Scannable** - Use headers, lists, and code blocks liberally
+
+### Code Examples
+
+Always provide runnable examples:
+
+```rust
+// ✅ Good: Complete, runnable example
+use dependency_injector::Container;
+
+fn main() {
+    let container = Container::new();
+    container.singleton(Config::default());
+
+    let config: Arc<Config> = container.get().unwrap();
+    println!("Config loaded: {:?}", config);
+}
+
+// ❌ Bad: Incomplete snippet
+let config = container.get();
+```
+
+### API Documentation
+
+For public APIs, include:
+
+```rust
+/// Brief one-line description.
+///
+/// Longer description with context and use cases.
+///
+/// # Arguments
+///
+/// * `name` - Description of the argument
+///
+/// # Returns
+///
+/// Description of return value
+///
+/// # Errors
+///
+/// * `ContainerError::NotFound` - When service is not registered
+///
+/// # Examples
+///
+/// ```rust
+/// let container = Container::new();
+/// container.singleton(MyService::new());
+/// let service: Arc<MyService> = container.get().unwrap();
+/// ```
+///
+/// # Panics
+///
+/// This function does not panic.
+pub fn example_function() { }
+```
+
+## SEO Best Practices
+
+### Meta Tags
+
+Every documentation page should have:
+- Unique `<title>` with primary keyword
+- `<meta name="description">` (150-160 chars)
+- Open Graph tags for social sharing
+- JSON-LD structured data
+
+### Content Optimization
+
+- Use H1 for page title (once per page)
+- Use H2-H4 for logical hierarchy
+- Include target keywords naturally
+- Add internal links between related pages
+- Use descriptive anchor text
+
+### Sitemap
+
+Keep `docs/public/sitemap.xml` updated with all pages:
+
+```xml
+<url>
+  <loc>https://example.com/docs/getting-started</loc>
+  <lastmod>2025-01-15</lastmod>
+  <changefreq>weekly</changefreq>
+  <priority>0.8</priority>
+</url>
+```
+
+## Changelog Format
+
+Follow Keep a Changelog format:
+
+```markdown
+## [0.2.3] - 2025-01-15
+
+### Added
+- New feature description (#123)
+
+### Changed
+- Breaking change description
+
+### Fixed
+- Bug fix description (#456)
+
+### Security
+- Security fix description
+```
+
+## README Structure
+
+### Main README
+
+1. **Badges** - Version, build status, docs link
+2. **One-liner** - What it does in one sentence
+3. **Features** - Bullet list of key features
+4. **Quick Start** - Minimal working example
+5. **Installation** - How to add dependency
+6. **Usage** - Common use cases with examples
+7. **Performance** - Benchmark highlights
+8. **Documentation** - Link to full docs
+9. **License** - License information
+
+### Package READMEs
+
+For FFI packages, include:
+1. Installation for that language
+2. Platform requirements
+3. Quick example
+4. API reference
+5. Link to main project

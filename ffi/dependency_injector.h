@@ -164,6 +164,18 @@ DiErrorCode di_register_singleton_json(
 DiResult di_resolve(DiContainer* container, const char* type_name);
 
 /**
+ * Resolve a service and return its data as a JSON string.
+ *
+ * Convenience function for languages that use JSON serialization.
+ *
+ * @param container The container to resolve from.
+ * @param type_name The service type name to resolve.
+ * @return A pointer to the null-terminated JSON string, or NULL if not found.
+ *         Must be freed with di_string_free().
+ */
+char* di_resolve_json(DiContainer* container, const char* type_name);
+
+/**
  * Check if a service is registered.
  *
  * @param container The container to check.

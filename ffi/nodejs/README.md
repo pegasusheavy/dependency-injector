@@ -8,18 +8,28 @@ Node.js/TypeScript bindings for the high-performance Rust dependency injection c
 - 📦 **Type-Safe** - Full TypeScript support with generics
 - 🔄 **Scoped Containers** - Hierarchical scopes for request-level isolation
 - 🧵 **Thread-Safe** - Safe to use in worker threads
-- 🔌 **FFI-Based** - Direct native bindings via ffi-napi
+- 🔌 **FFI-Based** - Direct native bindings via koffi (no native compilation required)
+- ⚡ **SWC-Powered** - Lightning-fast builds with SWC
 
 ## Prerequisites
 
-1. Build the Rust library:
+1. **pnpm** - This project requires pnpm as the package manager:
+
+```bash
+# Install pnpm if you don't have it
+npm install -g pnpm
+# Or use corepack (Node.js 16.10+)
+corepack enable
+```
+
+2. Build the Rust library:
 
 ```bash
 cd /path/to/dependency-injector
-cargo build --release --features ffi
+cargo rustc --release --features ffi --crate-type cdylib
 ```
 
-2. Set the library path:
+3. Set the library path:
 
 ```bash
 # Linux
@@ -36,8 +46,6 @@ set PATH=%PATH%;C:\path\to\dependency-injector\target\release
 
 ```bash
 pnpm add @pegasusheavy/dependency-injector
-# or
-npm install @pegasusheavy/dependency-injector
 ```
 
 ## Quick Start
@@ -155,12 +163,38 @@ enum ErrorCode {
 }
 ```
 
-## Running Tests
+## Development
+
+### Setup
+
+```bash
+# Install dependencies (pnpm required)
+cd ffi/nodejs
+pnpm install
+```
+
+### Build
+
+```bash
+# Full build (SWC + TypeScript declarations)
+pnpm build
+
+# SWC only (fast JS compilation)
+pnpm build:swc
+
+# TypeScript declarations only
+pnpm build:types
+
+# Type checking without emit
+pnpm typecheck
+```
+
+### Running Tests
 
 ```bash
 # Build the native library first
 cd /path/to/dependency-injector
-cargo build --release --features ffi
+cargo rustc --release --features ffi --crate-type cdylib
 
 # Run tests
 cd ffi/nodejs
@@ -168,12 +202,13 @@ export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_P
 pnpm test
 ```
 
-## Running the Example
+### Running the Example
 
 ```bash
 cd ffi/nodejs
 pnpm install
-pnpm run example
+export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
+pnpm example
 ```
 
 ## Type Safety
@@ -217,13 +252,32 @@ scope.free();
 root.free();
 ```
 
+## How It Works
+
+This package uses [koffi](https://koffi.dev/) for FFI bindings, which:
+- Requires no native compilation (unlike `ffi-napi`)
+- Works out of the box on Windows, macOS, and Linux
+- Supports all modern Node.js versions (18+)
+
+Services are serialized as JSON, which means:
+- Plain objects, arrays, strings, numbers, and booleans work perfectly
+- Class instances and functions cannot be serialized
+- Complex nested structures are fully supported
+
+## Performance
+
+The native Rust library achieves ~9ns singleton resolution. The FFI overhead adds:
+- ~50-100ns for JSON serialization
+- ~10-20ns for FFI call overhead
+
+For most applications, this is negligible. If you need maximum performance, consider using the Rust library directly.
+
 ## Limitations
 
 - Services are JSON-serialized, so functions and class instances won't work
-- Binary data should use `registerBytes()` (not fully implemented in simplified binding)
 - The native library must be built and accessible via LD_LIBRARY_PATH
+- Binary data should be base64-encoded in JSON
 
 ## License
 
 MIT OR Apache-2.0
-

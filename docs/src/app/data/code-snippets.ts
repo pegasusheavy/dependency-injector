@@ -264,6 +264,142 @@ test_scope.singleton(Database { url: <span class="text-green-400">"test"</span>.
 
     <span class="text-purple-400">assert_ne!</span>(config_a.tenant_id, config_b.tenant_id);
 }`,
+  // FFI - Go
+  ffiGo: `<span class="text-purple-400">package</span> main
+
+<span class="text-purple-400">import</span> (
+    <span class="text-green-400">"fmt"</span>
+    <span class="text-green-400">"github.com/pegasusheavy/dependency-injector/ffi/go/di"</span>
+)
+
+<span class="text-purple-400">type</span> <span class="text-blue-400">Config</span> <span class="text-purple-400">struct</span> {
+    Debug <span class="text-blue-400">bool</span>   \`json:<span class="text-green-400">"debug"</span>\`
+    Port  <span class="text-blue-400">int</span>    \`json:<span class="text-green-400">"port"</span>\`
+}
+
+<span class="text-purple-400">func</span> <span class="text-blue-400">main</span>() {
+    <span class="text-slate-500">// Create container</span>
+    container := di.NewContainer()
+    <span class="text-purple-400">defer</span> container.Free()
+
+    <span class="text-slate-500">// Register service</span>
+    container.RegisterValue(<span class="text-green-400">"Config"</span>, Config{Debug: <span class="text-purple-400">true</span>, Port: 8080})
+
+    <span class="text-slate-500">// Resolve service</span>
+    <span class="text-purple-400">var</span> config Config
+    container.ResolveJSON(<span class="text-green-400">"Config"</span>, &config)
+
+    fmt.Printf(<span class="text-green-400">"Port: %d\\n"</span>, config.Port)
+}`,
+
+  // FFI - Node.js
+  ffiNodejs: `<span class="text-purple-400">import</span> { Container } <span class="text-purple-400">from</span> <span class="text-green-400">'@pegasusheavy/dependency-injector'</span>;
+
+<span class="text-slate-500">// Define types</span>
+<span class="text-purple-400">interface</span> <span class="text-blue-400">Config</span> {
+  debug: <span class="text-blue-400">boolean</span>;
+  port: <span class="text-blue-400">number</span>;
+}
+
+<span class="text-slate-500">// Create container</span>
+<span class="text-purple-400">const</span> container = <span class="text-purple-400">new</span> Container();
+
+<span class="text-purple-400">try</span> {
+  <span class="text-slate-500">// Register service</span>
+  container.register&lt;Config&gt;(<span class="text-green-400">'Config'</span>, { debug: <span class="text-purple-400">true</span>, port: 8080 });
+
+  <span class="text-slate-500">// Resolve service</span>
+  <span class="text-purple-400">const</span> config = container.resolve&lt;Config&gt;(<span class="text-green-400">'Config'</span>);
+  console.log(<span class="text-green-400">\`Port: \${config.port}\`</span>);
+
+  <span class="text-slate-500">// Optional resolution</span>
+  <span class="text-purple-400">const</span> missing = container.tryResolve&lt;Config&gt;(<span class="text-green-400">'Missing'</span>);
+  <span class="text-slate-500">// missing is null</span>
+} <span class="text-purple-400">finally</span> {
+  container.free();
+}`,
+
+  // FFI - Python
+  ffiPython: `<span class="text-purple-400">from</span> dependency_injector <span class="text-purple-400">import</span> Container
+
+<span class="text-slate-500"># Create container (with context manager)</span>
+<span class="text-purple-400">with</span> Container() <span class="text-purple-400">as</span> container:
+    <span class="text-slate-500"># Register service</span>
+    container.register(<span class="text-green-400">"Config"</span>, {
+        <span class="text-green-400">"debug"</span>: <span class="text-purple-400">True</span>,
+        <span class="text-green-400">"port"</span>: 8080
+    })
+
+    <span class="text-slate-500"># Resolve service</span>
+    config = container.resolve(<span class="text-green-400">"Config"</span>)
+    <span class="text-purple-400">print</span>(<span class="text-green-400">f"Port: {config['port']}"</span>)
+
+    <span class="text-slate-500"># Optional resolution</span>
+    missing = container.try_resolve(<span class="text-green-400">"Missing"</span>)
+    <span class="text-slate-500"># missing is None</span>
+
+    <span class="text-slate-500"># Check existence</span>
+    <span class="text-purple-400">print</span>(container.contains(<span class="text-green-400">"Config"</span>))  <span class="text-slate-500"># True</span>
+
+<span class="text-slate-500"># Container auto-freed after 'with' block</span>`,
+
+  // FFI - C#
+  ffiCsharp: `<span class="text-purple-400">using</span> DependencyInjector;
+
+<span class="text-slate-500">// Define types</span>
+<span class="text-purple-400">record</span> <span class="text-blue-400">Config</span>(<span class="text-blue-400">bool</span> Debug, <span class="text-blue-400">int</span> Port);
+
+<span class="text-slate-500">// Create container (with using statement)</span>
+<span class="text-purple-400">using</span> <span class="text-purple-400">var</span> container = <span class="text-purple-400">new</span> Container();
+
+<span class="text-slate-500">// Register service</span>
+container.Register(<span class="text-green-400">"Config"</span>, <span class="text-purple-400">new</span> Config(Debug: <span class="text-purple-400">true</span>, Port: 8080));
+
+<span class="text-slate-500">// Resolve service</span>
+<span class="text-purple-400">var</span> config = container.Resolve&lt;Config&gt;(<span class="text-green-400">"Config"</span>);
+Console.WriteLine(<span class="text-green-400">$"Port: {config.Port}"</span>);
+
+<span class="text-slate-500">// Optional resolution</span>
+<span class="text-purple-400">var</span> missing = container.TryResolve&lt;Config&gt;(<span class="text-green-400">"Missing"</span>);
+<span class="text-slate-500">// missing is null</span>
+
+<span class="text-slate-500">// Check existence</span>
+Console.WriteLine(container.Contains(<span class="text-green-400">"Config"</span>));  <span class="text-slate-500">// True</span>`,
+
+  // FFI - Build Instructions
+  ffiBuild: `<span class="text-slate-500"># Build the FFI shared library</span>
+cargo rustc --release --features ffi --crate-type cdylib
+
+<span class="text-slate-500"># Output locations:</span>
+<span class="text-slate-500"># Linux:   target/release/libdependency_injector.so</span>
+<span class="text-slate-500"># macOS:   target/release/libdependency_injector.dylib</span>
+<span class="text-slate-500"># Windows: target/release/dependency_injector.dll</span>
+
+<span class="text-slate-500"># Set library path (Linux)</span>
+export LD_LIBRARY_PATH=/path/to/target/release:$LD_LIBRARY_PATH
+
+<span class="text-slate-500"># Set library path (macOS)</span>
+export DYLD_LIBRARY_PATH=/path/to/target/release:$DYLD_LIBRARY_PATH`,
+
+  // FFI - Scoped containers example
+  ffiScopes: `<span class="text-slate-500">// Go example - scoped containers</span>
+root := di.NewContainer()
+<span class="text-purple-400">defer</span> root.Free()
+
+root.RegisterValue(<span class="text-green-400">"Config"</span>, Config{Env: <span class="text-green-400">"production"</span>})
+
+<span class="text-slate-500">// Create child scope</span>
+request, _ := root.Scope()
+<span class="text-purple-400">defer</span> request.Free()
+
+request.RegisterValue(<span class="text-green-400">"RequestId"</span>, RequestId{Id: <span class="text-green-400">"req-123"</span>})
+
+<span class="text-slate-500">// Child can access parent</span>
+<span class="text-purple-400">var</span> config Config
+request.ResolveJSON(<span class="text-green-400">"Config"</span>, &config) <span class="text-slate-500">// Works!</span>
+
+<span class="text-slate-500">// Parent cannot access child</span>
+root.Contains(<span class="text-green-400">"RequestId"</span>) <span class="text-slate-500">// false</span>`,
 } as const;
 
 export type CodeSnippetKey = keyof typeof CODE_SNIPPETS;

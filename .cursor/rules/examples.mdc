@@ -1,0 +1,290 @@
+---
+description: Guidelines for creating examples in the dependency-injector project
+globs: ["examples/**/*.rs", "ffi/**/examples/**/*"]
+alwaysApply: false
+---
+
+# Examples Agent
+
+You are an expert at creating clear, educational code examples.
+
+## Example Categories
+
+### 1. Basic Examples (`examples/basic.rs`)
+
+Minimal, focused demonstrations:
+
+```rust
+//! Basic dependency injection example
+//!
+//! Run with: `cargo run --example basic`
+
+use dependency_injector::Container;
+use std::sync::Arc;
+
+struct Config {
+    database_url: String,
+}
+
+fn main() {
+    // Create container
+    let container = Container::new();
+
+    // Register singleton
+    container.singleton(Config {
+        database_url: "postgres://localhost/db".into(),
+    });
+
+    // Resolve service
+    let config: Arc<Config> = container.get().unwrap();
+    println!("Database URL: {}", config.database_url);
+}
+```
+
+### 2. Feature Examples (`examples/scopes.rs`)
+
+Demonstrate specific features:
+
+```rust
+//! Demonstrates scoped containers for request isolation
+//!
+//! Run with: `cargo run --example scopes`
+
+use dependency_injector::Container;
+use std::sync::Arc;
+
+struct RequestId(u64);
+struct Database;
+
+fn main() {
+    // Application-level container
+    let app = Container::new();
+    app.singleton(Database);
+
+    // Simulate requests
+    for id in 1..=3 {
+        // Per-request scope
+        let request = app.scope();
+        request.singleton(RequestId(id));
+
+        handle_request(&request);
+    }
+}
+
+fn handle_request(container: &Container) {
+    let db: Arc<Database> = container.get().unwrap();
+    let req_id: Arc<RequestId> = container.get().unwrap();
+    println!("Request {} using database", req_id.0);
+}
+```
+
+### 3. Real-World Examples (`examples/web_server.rs`)
+
+Production-like scenarios:
+
+```rust
+//! Web server with dependency injection
+//!
+//! Run with: `cargo run --example web_server`
+
+use dependency_injector::Container;
+use std::sync::Arc;
+
+// Domain types
+struct Config { port: u16 }
+struct Database { /* ... */ }
+struct UserRepository { db: Arc<Database> }
+struct AuthService { repo: Arc<UserRepository> }
+
+fn main() {
+    let container = setup_container();
+
+    // Would integrate with actual web framework
+    let auth: Arc<AuthService> = container.get().unwrap();
+    println!("Auth service ready");
+}
+
+fn setup_container() -> Container {
+    let container = Container::new();
+
+    // Configuration
+    container.singleton(Config { port: 8080 });
+
+    // Infrastructure
+    container.lazy(|| Database::connect());
+
+    // Repositories
+    container.transient(|| {
+        let db = CONTAINER.get::<Database>().unwrap();
+        UserRepository { db }
+    });
+
+    // Services
+    container.lazy(|| {
+        let repo = CONTAINER.get::<UserRepository>().unwrap();
+        AuthService { repo }
+    });
+
+    container
+}
+```
+
+### 4. Performance Examples (`examples/memory_profiler.rs`)
+
+For benchmarking and profiling:
+
+```rust
+//! Memory usage profiler for the DI container
+//!
+//! Run with: `cargo run --example memory_profiler --features dhat-heap`
+
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
+fn main() {
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
+    // ... profiling code ...
+}
+```
+
+## FFI Examples
+
+### Node.js (`ffi/nodejs/examples/basic.ts`)
+
+```typescript
+import { Container } from 'dependency-injector-ffi';
+
+interface UserService {
+  id: number;
+  name: string;
+}
+
+const container = new Container();
+
+// Register
+container.singleton<UserService>('UserService', {
+  id: 1,
+  name: 'Admin'
+});
+
+// Resolve
+const user = container.get<UserService>('UserService');
+console.log(`User: ${user.name}`);
+
+// Cleanup
+container.free();
+```
+
+### Python (`ffi/python/examples/basic.py`)
+
+```python
+from dependency_injector import Container
+
+# Create container
+container = Container()
+
+# Register singleton
+container.singleton("Config", {"debug": True, "port": 8080})
+
+# Resolve
+config = container.resolve("Config")
+print(f"Debug mode: {config['debug']}")
+
+# Or use context manager
+with Container() as c:
+    c.singleton("Service", {"name": "MyService"})
+    service = c.resolve("Service")
+```
+
+### Go (`ffi/go/example/main.go`)
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/example/dependency-injector/ffi/go/di"
+)
+
+type Config struct {
+    Debug bool `json:"debug"`
+    Port  int  `json:"port"`
+}
+
+func main() {
+    container := di.NewContainer()
+    defer container.Free()
+
+    // Register
+    container.Singleton("Config", Config{Debug: true, Port: 8080})
+
+    // Resolve
+    var config Config
+    if err := container.ResolveInto("Config", &config); err != nil {
+        panic(err)
+    }
+
+    fmt.Printf("Port: %d\n", config.Port)
+}
+```
+
+### C# (`ffi/csharp/Example/Program.cs`)
+
+```csharp
+using DependencyInjector;
+
+using var container = new Container();
+
+// Register
+container.Singleton(new Config { Debug = true, Port = 8080 });
+
+// Resolve
+var config = container.Get<Config>();
+Console.WriteLine($"Port: {config.Port}");
+
+record Config
+{
+    public bool Debug { get; init; }
+    public int Port { get; init; }
+}
+```
+
+## Example Guidelines
+
+### DO
+
+- ✅ Include file-level doc comment with description
+- ✅ Add `Run with:` instructions
+- ✅ Use realistic type names (not Foo, Bar)
+- ✅ Show complete, runnable code
+- ✅ Handle errors appropriately
+- ✅ Clean up resources (especially FFI)
+
+### DON'T
+
+- ❌ Use `unwrap()` without explanation
+- ❌ Skip necessary imports
+- ❌ Use placeholder comments like `// do stuff`
+- ❌ Create overly complex examples
+- ❌ Ignore error cases
+
+## Running Examples
+
+```bash
+# Rust examples
+cargo run --example basic
+cargo run --example scopes
+cargo run --example web_server
+
+# With features
+cargo run --example memory_profiler --features dhat-heap
+
+# FFI examples (after building native library)
+cd ffi/nodejs && pnpm example
+cd ffi/python && python examples/basic.py
+cd ffi/go && go run example/main.go
+cd ffi/csharp && dotnet run --project Example
+```

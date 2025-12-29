@@ -16,7 +16,7 @@ Python bindings for the high-performance Rust dependency injection container.
 
 ```bash
 cd /path/to/dependency-injector
-cargo build --release --features ffi
+cargo rustc --release --features ffi --crate-type cdylib
 ```
 
 2. Set the library path:
@@ -48,10 +48,10 @@ pip install -e .
 ## Quick Start
 
 ```python
-from dependency_injector.container import CachingContainer
+from dependency_injector import Container
 
 # Create container
-container = CachingContainer()
+container = Container()
 
 # Register services (automatically JSON-serialized)
 container.register("Config", {"debug": True, "port": 8080})
@@ -71,9 +71,9 @@ container.free()
 ## Context Manager Support
 
 ```python
-from dependency_injector.container import CachingContainer
+from dependency_injector import Container
 
-with CachingContainer() as container:
+with Container() as container:
     container.register("Service", {"data": "value"})
     result = container.resolve("Service")
     print(result["data"])  # "value"
@@ -85,9 +85,9 @@ with CachingContainer() as container:
 Create child scopes for request-level isolation:
 
 ```python
-from dependency_injector.container import CachingContainer
+from dependency_injector import Container
 
-root = CachingContainer()
+root = Container()
 root.register("Config", {"env": "production"})
 
 # Create request scope
@@ -105,17 +105,36 @@ request.free()
 root.free()
 ```
 
+## Optional Resolution
+
+Use `try_resolve` to get `None` instead of raising an exception for missing services:
+
+```python
+from dependency_injector import Container
+
+container = Container()
+container.register("Config", {"debug": True})
+
+# Returns the value if found
+config = container.try_resolve("Config")  # {"debug": True}
+
+# Returns None if not found (no exception)
+missing = container.try_resolve("NonExistent")  # None
+
+container.free()
+```
+
 ## Type Hints with TypedDict
 
 ```python
 from typing import TypedDict
-from dependency_injector.container import CachingContainer
+from dependency_injector import Container
 
 class Config(TypedDict):
     debug: bool
     port: int
 
-container = CachingContainer()
+container = Container()
 container.register("Config", Config(debug=True, port=8080))
 
 config: Config = container.resolve("Config")
@@ -128,41 +147,50 @@ container.free()
 
 ### `Container`
 
-Basic container without resolve support (for contains/registration only).
-
 ```python
 from dependency_injector import Container
 
 container = Container()
+
+# Register a service (JSON-serializable value)
 container.register("Key", {"value": 1})
-container.contains("Key")  # True
-container.service_count    # 1
-container.free()
-```
 
-### `CachingContainer`
-
-Container with full resolve support via local caching.
-
-```python
-from dependency_injector.container import CachingContainer
-
-container = CachingContainer()
-container.register("Key", {"value": 1})
+# Resolve a service (raises DIError if not found)
 data = container.resolve("Key")  # {"value": 1}
+
+# Try to resolve (returns None if not found)
+data = container.try_resolve("Key")  # {"value": 1} or None
+
+# Check if a service exists
+container.contains("Key")  # True
+
+# Get service count
+container.service_count  # 1
+
+# Create a child scope
+child = container.scope()
+
+# Get library version
+Container.version()  # "0.2.2"
+
+# Free resources
 container.free()
 ```
 
 ### Error Handling
 
 ```python
-from dependency_injector import DIError, ErrorCode
+from dependency_injector import Container, DIError, ErrorCode
+
+container = Container()
 
 try:
     container.resolve("NonExistent")
 except DIError as e:
     print(e.code)     # ErrorCode.NOT_FOUND
     print(e.message)  # "Service 'NonExistent' not found"
+
+container.free()
 ```
 
 ### Error Codes
@@ -181,6 +209,7 @@ except DIError as e:
 ```bash
 cd ffi/python
 pip install -e ".[dev]"
+export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
 pytest tests/ -v
 ```
 
@@ -188,16 +217,34 @@ pytest tests/ -v
 
 ```bash
 cd ffi/python
+export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
 python examples/basic.py
 ```
+
+## How It Works
+
+This library uses Python's built-in `ctypes` module to call the Rust FFI functions directly. Services are serialized as JSON, which means:
+
+- Plain objects (dicts), lists, strings, numbers, and booleans work perfectly
+- Class instances and functions cannot be serialized
+- Complex nested structures are fully supported
+- Use `dataclasses.asdict()` to serialize dataclasses
+
+## Performance
+
+The native Rust library achieves ~10ns singleton resolution. The FFI overhead adds:
+
+- ~1-5µs for JSON serialization (Python's `json` module)
+- Minimal overhead for the ctypes FFI call
+
+For most applications, this is negligible compared to actual I/O operations.
 
 ## Limitations
 
 - Services are JSON-serialized, so functions and class instances won't work
-- Use `CachingContainer` for `resolve()` support
 - The native library must be accessible via LD_LIBRARY_PATH
+- Binary data should be base64-encoded in JSON
 
 ## License
 
 MIT OR Apache-2.0
-

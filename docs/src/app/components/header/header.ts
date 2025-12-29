@@ -14,6 +14,7 @@ export class HeaderComponent {
   navLinks = [
     { path: '/docs/getting-started', label: 'Getting Started', exact: false },
     { path: '/docs/guide', label: 'Guide', exact: false },
+    { path: '/docs/ffi', label: 'FFI Bindings', exact: false },
     { path: '/docs/api', label: 'API', exact: false },
     { path: '/docs/examples', label: 'Examples', exact: false },
     { path: '/benchmarks', label: 'Benchmarks', exact: false }

@@ -2,18 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Dependency Injector - High-Performance DI for Rust</title>
+  <title>Dependency Injector - High-Performance DI for Rust, Go, Node.js, Python & C#</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A lightning-fast, lock-free dependency injection container for Rust. Type-safe, zero-config, and built for modern concurrent applications.">
-  <meta name="keywords" content="rust, dependency injection, di, ioc, container, service locator">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="Dependency Injector - High-Performance DI for Rust">
-  <meta property="og:description" content="High-performance, lock-free dependency injection container for Rust">
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Dependency Injector - High-Performance DI for Rust, Go, Node.js, Python & C#">
+  <meta name="description" content="A lightning-fast, lock-free dependency injection container for Rust with FFI bindings for Go, Node.js, Python, and C#. ~9ns singleton resolution, type-safe, zero-config, thread-safe. Built for modern concurrent applications.">
+  <meta name="keywords" content="rust dependency injection, di container, ioc container, rust di, go dependency injection, nodejs di, python di, csharp di, ffi bindings, lock-free, thread-safe, high-performance, service locator, inversion of control, rust library, cross-language di">
+  <meta name="author" content="Pegasus Heavy Industries">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+  <meta name="revisit-after" content="7 days">
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://pegasusheavy.github.io/dependency-injector/">
+
+  <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://pegasusheavy.github.io/dependency-injector/">
+  <meta property="og:title" content="Dependency Injector - High-Performance DI for Rust, Go, Node.js, Python & C#">
+  <meta property="og:description" content="Lightning-fast dependency injection with ~9ns resolution. Cross-language FFI bindings for Go, Node.js, Python, and C#. Lock-free, thread-safe, type-safe.">
+  <meta property="og:image" content="https://pegasusheavy.github.io/dependency-injector/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Dependency Injector">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://pegasusheavy.github.io/dependency-injector/">
+  <meta name="twitter:title" content="Dependency Injector - High-Performance DI for Rust, Go, Node.js, Python & C#">
+  <meta name="twitter:description" content="Lightning-fast dependency injection with ~9ns resolution. Cross-language FFI bindings for Go, Node.js, Python, and C#. Lock-free, thread-safe, type-safe.">
+  <meta name="twitter:image" content="https://pegasusheavy.github.io/dependency-injector/og-image.png">
+  <meta name="twitter:creator" content="@PegasusHeavy">
 
   <!-- Favicons -->
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="48x48" href="favicon-48x48.png">
@@ -24,10 +49,160 @@
   <!-- Web App Manifest -->
   <link rel="manifest" href="site.webmanifest">
   <meta name="theme-color" content="#0f172a">
+  <meta name="msapplication-TileColor" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dependency Injector">
 
   <!-- Preconnect to fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- JSON-LD Structured Data for Software -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "dependency-injector",
+    "description": "High-performance, lock-free dependency injection container for Rust with FFI bindings for Go, Node.js, Python, and C#",
+    "url": "https://pegasusheavy.github.io/dependency-injector/",
+    "codeRepository": "https://github.com/pegasusheavy/dependency-injector",
+    "programmingLanguage": ["Rust", "Go", "TypeScript", "Python", "C#"],
+    "runtimePlatform": ["Rust", "Go", "Node.js", "Python", ".NET"],
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Organization",
+      "name": "Pegasus Heavy Industries",
+      "url": "https://github.com/pegasusheavy"
+    },
+    "maintainer": {
+      "@type": "Organization",
+      "name": "Pegasus Heavy Industries"
+    },
+    "keywords": [
+      "dependency injection",
+      "di container",
+      "ioc container",
+      "rust",
+      "go",
+      "nodejs",
+      "python",
+      "csharp",
+      "ffi",
+      "cross-language",
+      "high-performance",
+      "lock-free",
+      "thread-safe"
+    ],
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": ["Linux", "macOS", "Windows"]
+  }
+  </script>
+
+  <!-- JSON-LD for Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Pegasus Heavy Industries",
+    "url": "https://github.com/pegasusheavy",
+    "logo": "https://pegasusheavy.github.io/dependency-injector/android-chrome-512x512.png",
+    "sameAs": [
+      "https://github.com/pegasusheavy",
+      "https://www.patreon.com/c/PegasusHeavyIndustries"
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD for FAQPage (AEO optimization) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is dependency-injector?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "dependency-injector is a high-performance, lock-free dependency injection container for Rust. It achieves ~9ns singleton resolution times and provides type-safe, zero-config dependency management for modern concurrent applications."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What languages does dependency-injector support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "dependency-injector is written in Rust and provides FFI bindings for Go, Node.js/TypeScript, Python, and C#/.NET. This allows you to use the same high-performance DI container across multiple languages in your projects."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How fast is dependency-injector?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "dependency-injector achieves ~9ns singleton resolution with hot cache, making it one of the fastest DI containers available. In benchmarks, it's 6-12x faster than Microsoft.Extensions.DI for C# and comparable to raw sync.Map in Go."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is dependency-injector thread-safe?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, dependency-injector is fully thread-safe. It uses lock-free data structures (DashMap) and atomic operations to provide safe concurrent access from multiple threads without performance degradation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does dependency-injector support scoped containers?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, dependency-injector supports hierarchical scoped containers. Child scopes inherit all services from parent containers, but services registered in child scopes are not visible to parents. This is ideal for request-scoped services in web applications."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I install dependency-injector?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "For Rust: Add `dependency-injector = \"0.2\"` to Cargo.toml. For other languages, build the Rust library with `cargo rustc --release --features ffi --crate-type cdylib` and use the respective language bindings (Go: go get, Node.js: pnpm add, Python: pip install, C#: dotnet add)."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD for HowTo (AEO optimization) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to use dependency-injector in Rust",
+    "description": "Quick guide to getting started with dependency-injector in Rust",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "name": "Add to Cargo.toml",
+        "text": "Add dependency-injector = \"0.2\" to your Cargo.toml dependencies section"
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Create a container",
+        "text": "Create a new container with let container = Container::new();"
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Register services",
+        "text": "Register singleton services with container.singleton(MyService::new());"
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Resolve services",
+        "text": "Resolve services with let service: Arc<MyService> = container.get().unwrap();"
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <app-root></app-root>

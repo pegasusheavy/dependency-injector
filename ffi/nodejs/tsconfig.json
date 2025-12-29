@@ -12,10 +12,10 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
+    "emitDeclarationOnly": true,
+    "sourceMap": false,
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "examples"]
 }
-

@@ -1,0 +1,263 @@
+---
+description: Error handling patterns and conventions for the dependency-injector library
+globs: ["src/**/*.rs", "src/error.rs"]
+alwaysApply: false
+---
+
+# Error Handling Agent
+
+You are an expert in Rust error handling, specializing in library error design.
+
+## Error Types
+
+### ContainerError
+
+The main error type for container operations:
+
+```rust
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum ContainerError {
+    #[error("Service '{type_name}' not found in container")]
+    NotFound { type_name: &'static str },
+
+    #[error("Service '{type_name}' is already registered")]
+    AlreadyRegistered { type_name: &'static str },
+
+    #[error("Circular dependency detected: {chain}")]
+    CircularDependency { chain: String },
+
+    #[error("Factory for '{type_name}' panicked: {message}")]
+    FactoryPanic { type_name: &'static str, message: String },
+
+    #[error("Container is frozen and cannot accept new registrations")]
+    Frozen,
+}
+```
+
+## Error Design Principles
+
+### 1. Use `thiserror` for Library Errors
+
+```rust
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum MyError {
+    #[error("descriptive message: {field}")]
+    Variant { field: String },
+}
+```
+
+### 2. Include Context
+
+Errors should contain enough information to debug:
+
+```rust
+// ✅ Good: Includes type name
+NotFound { type_name: "UserService" }
+
+// ❌ Bad: No context
+NotFound
+```
+
+### 3. Implement Standard Traits
+
+```rust
+#[derive(Debug, Clone, Error)]
+pub enum ContainerError { ... }
+
+// Enables:
+// - Debug output: {:?}
+// - Clone for retrying
+// - Display for users
+// - Error trait for ? operator
+```
+
+## API Patterns
+
+### Fallible Methods: `try_*`
+
+Return `Option<T>` for "might not exist" scenarios:
+
+```rust
+impl Container {
+    /// Returns the service if registered, None otherwise.
+    pub fn try_get<T: Injectable>(&self) -> Option<Arc<T>> {
+        self.storage.get::<T>()
+    }
+}
+
+// Usage
+if let Some(config) = container.try_get::<Config>() {
+    // Use config
+}
+```
+
+### Infallible Methods: Direct Access
+
+Return `T` directly when failure indicates a bug:
+
+```rust
+impl Container {
+    /// Returns the service. Panics if not registered.
+    ///
+    /// # Panics
+    /// Panics if the service type is not registered.
+    pub fn get<T: Injectable>(&self) -> Arc<T> {
+        self.try_get().expect("Service not registered")
+    }
+}
+```
+
+### Result-Returning Methods
+
+For operations that can fail in expected ways:
+
+```rust
+impl Container {
+    /// Registers a singleton, returning error if already registered.
+    pub fn try_singleton<T: Injectable>(&self, service: T) -> Result<(), ContainerError> {
+        if self.contains::<T>() {
+            return Err(ContainerError::AlreadyRegistered {
+                type_name: std::any::type_name::<T>()
+            });
+        }
+        self.storage.insert(service);
+        Ok(())
+    }
+}
+```
+
+## FFI Error Handling
+
+### Thread-Local Error Storage
+
+```rust
+use std::cell::RefCell;
+
+thread_local! {
+    static LAST_ERROR: RefCell<Option<String>> = RefCell::new(None);
+}
+
+fn set_last_error(msg: impl Into<String>) {
+    LAST_ERROR.with(|e| {
+        *e.borrow_mut() = Some(msg.into());
+    });
+}
+
+fn take_last_error() -> Option<String> {
+    LAST_ERROR.with(|e| e.borrow_mut().take())
+}
+```
+
+### FFI Functions
+
+```rust
+#[unsafe(no_mangle)]
+pub extern "C" fn di_error_message() -> *mut c_char {
+    match take_last_error() {
+        Some(msg) => CString::new(msg).unwrap().into_raw(),
+        None => std::ptr::null_mut(),
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn di_error_clear() {
+    let _ = take_last_error();
+}
+```
+
+### Usage Pattern
+
+```rust
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn di_resolve_json(
+    container: *mut DiContainer,
+    type_name: *const c_char,
+) -> *mut c_char {
+    // Clear any previous error
+    let _ = take_last_error();
+
+    // Validate inputs
+    if container.is_null() {
+        set_last_error("Container pointer is null");
+        return std::ptr::null_mut();
+    }
+
+    // ... operation ...
+
+    match result {
+        Ok(json) => CString::new(json).unwrap().into_raw(),
+        Err(e) => {
+            set_last_error(e.to_string());
+            std::ptr::null_mut()
+        }
+    }
+}
+```
+
+## Panic Handling
+
+### In Factories
+
+Catch panics from user-provided code:
+
+```rust
+use std::panic::{catch_unwind, AssertUnwindSafe};
+
+fn invoke_factory<T>(factory: &dyn Fn() -> T) -> Result<T, ContainerError> {
+    catch_unwind(AssertUnwindSafe(|| factory()))
+        .map_err(|panic| {
+            let message = panic.downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| panic.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "Unknown panic".to_string());
+
+            ContainerError::FactoryPanic {
+                type_name: std::any::type_name::<T>(),
+                message,
+            }
+        })
+}
+```
+
+### Documentation
+
+Always document panic conditions:
+
+```rust
+/// Resolves a service from the container.
+///
+/// # Panics
+///
+/// Panics if:
+/// - The service type is not registered
+/// - The factory panics during lazy initialization
+pub fn get<T: Injectable>(&self) -> Arc<T> { ... }
+```
+
+## Testing Errors
+
+```rust
+#[test]
+fn test_not_found_error() {
+    let container = Container::new();
+
+    let result = container.try_get::<UnregisteredService>();
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_already_registered() {
+    let container = Container::new();
+    container.singleton(Config::default());
+
+    let result = container.try_singleton(Config::default());
+    assert!(matches!(
+        result,
+        Err(ContainerError::AlreadyRegistered { .. })
+    ));
+}
+```

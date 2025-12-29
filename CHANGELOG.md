@@ -10,22 +10,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Highlights
 - **FFI Bindings** - Use dependency-injector from Go, Python, Node.js, and C#
 - **Cross-Language Benchmarks** - Comprehensive comparison against 5 languages
+- **Compile-Time Safety** - Type-state builder and verified service providers
 - **Memory Verified** - Zero leaks confirmed by both dhat and Valgrind
 
 ### Added
 - **FFI Support** - C-compatible bindings for cross-language integration
   - Go package with CGO bindings (`ffi/go/`)
   - Python package with ctypes (`ffi/python/`)
-  - Node.js package with ffi-napi (`ffi/nodejs/`)
+  - Node.js package with koffi (`ffi/nodejs/`) - no native compilation needed
   - C# library with P/Invoke (`ffi/csharp/`)
   - C header file (`ffi/dependency_injector.h`)
+  - `di_resolve_json()` FFI function for JSON-based resolution
+- **Compile-Time Safety** - New type-safe DI patterns
+  - `TypedBuilder` / `TypedContainer` - Type-state builder pattern
+  - `HasType<T>` trait for compile-time dependency verification
+  - `Service` trait for declaring service dependencies
+  - `ServiceProvider` trait for automatic registration
+  - `Resolvable` trait for generic resolution (tuples, Option, etc.)
+  - `ServiceModule` trait for grouping related services
 - **Memory Profiling** - `memory_profiler` example with dhat integration
+- **Deploy Scripts** - Automated release tooling
+  - `scripts/deploy.sh` - Rust library deployment to crates.io
+  - `scripts/deploy-ffi.sh` - FFI package deployment (npm, PyPI, NuGet)
 - **Cursor Agents** - AI-assisted development workflows
   - `rust-di-expert` - DI pattern guidance
   - `performance-optimizer` - Benchmark analysis
   - `docs-writer` - Documentation generation
   - `test-engineer` - Test coverage
   - `release-manager` - Publishing workflow
+
+### Changed
+- Node.js FFI bindings now use `koffi` instead of `ffi-napi` (no native compilation)
+- Node.js package requires `pnpm` as package manager (enforced via `only-allow`)
+- `cdylib` crate type now conditional on `ffi` feature (use `cargo rustc --features ffi --crate-type cdylib`)
+- Go FFI uses `di_resolve_json()` for cleaner JSON handling
+- Improved `nil` safety in Go `Container.Free()` method
+
+### Documentation
+- **New FFI Bindings page** (`/docs/ffi`) with comprehensive language guides
+- **SEO/AEO Enhancements**
+  - JSON-LD structured data (SoftwareSourceCode, FAQPage, HowTo schemas)
+  - Open Graph and Twitter Card meta tags
+  - `sitemap.xml` and `robots.txt`
+  - Per-page dynamic meta tags via `SeoService`
+- Updated examples page with cross-language code snippets
+- Updated getting-started with FFI links
+- Added `BENCHMARK_COMPARISON.md` for 5-language comparison
+- Added `RUST_DI_COMPARISON.md` for Rust ecosystem comparison
 
 ### Benchmarks
 Cross-language comparison results:
@@ -52,12 +83,6 @@ Verified with dhat and Valgrind:
 - **Indirectly lost: 0 bytes**
 - **Possibly lost: 0 bytes**
 - Total allocations: 51,808, properly freed: 51,804 (99.99%)
-
-### Documentation
-- Updated website with FFI section and cross-language benchmarks
-- Added `BENCHMARK_COMPARISON.md` for 5-language comparison
-- Added `RUST_DI_COMPARISON.md` for Rust ecosystem comparison
-- Updated README with FFI examples and performance rankings
 
 ## [0.2.1] - 2025-12-21
 

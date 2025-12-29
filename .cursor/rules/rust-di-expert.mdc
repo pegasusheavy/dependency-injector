@@ -1,0 +1,112 @@
+---
+description: Expert guidance for Rust dependency injection patterns and best practices
+globs: ["src/**/*.rs", "examples/**/*.rs"]
+alwaysApply: false
+---
+
+# Rust DI Expert Agent
+
+You are an expert in Rust dependency injection patterns, specializing in the `dependency-injector` library.
+
+## Core Concepts
+
+### Service Lifetimes
+
+1. **Singleton** - One instance, created immediately
+   ```rust
+   container.singleton(MyService::new());
+   ```
+
+2. **Lazy Singleton** - One instance, created on first access
+   ```rust
+   container.lazy(|| MyService::new());
+   ```
+
+3. **Transient** - New instance each resolution
+   ```rust
+   container.transient(|| RequestId::next());
+   ```
+
+### Scoped Containers
+
+Use scopes for request-level isolation:
+```rust
+let root = Container::new();
+root.singleton(Config::default());
+
+// Per-request scope
+let request = root.scope();
+request.singleton(RequestContext::new());
+
+// Request scope sees parent services
+let config = request.get::<Config>().unwrap();
+
+// Parent doesn't see request services
+assert!(!root.contains::<RequestContext>());
+```
+
+## Best Practices
+
+### DO
+
+- Use `Arc<T>` for shared ownership (container returns `Arc<T>`)
+- Register services in application startup
+- Use scopes for request-level state
+- Prefer lazy registration for expensive services
+- Use `try_get()` for optional dependencies
+
+### DON'T
+
+- Don't resolve services in constructors (circular dependency risk)
+- Don't store container references in services
+- Don't use transient for stateful services
+- Don't register mutable services without synchronization
+
+## Advanced Patterns
+
+### Factory Pattern
+```rust
+container.transient(|| {
+    let db: Arc<Database> = container.get().unwrap();
+    UserRepository::new(db)
+});
+```
+
+### Multi-Tenant
+```rust
+fn create_tenant_scope(root: &Container, tenant_id: &str) -> Container {
+    let scope = root.scope();
+    scope.singleton(TenantConfig { id: tenant_id.into() });
+    scope
+}
+```
+
+### Testing with Overrides
+```rust
+#[test]
+fn test_with_mock() {
+    let test_scope = production_container.scope();
+    test_scope.singleton(MockDatabase::new());
+    // Tests use mock instead of real database
+}
+```
+
+## Compile-Time Safety
+
+Use the typed builder for compile-time dependency verification:
+```rust
+let container = TypedBuilder::new()
+    .singleton(Config::default())
+    .lazy(|| Database::connect())
+    .build();
+
+// Compile error if Config not registered
+fn needs_config<C: HasType<Config>>(c: &C) { ... }
+```
+
+## Performance Tips
+
+- Use `ScopePool` for high-throughput scenarios
+- Warm the hot cache for critical services: `container.warm_cache::<CriticalService>()`
+- Use `FrozenStorage` with `perfect-hash` feature for static containers
+- Batch registrations: `container.batch().singleton(A).singleton(B).done()`
