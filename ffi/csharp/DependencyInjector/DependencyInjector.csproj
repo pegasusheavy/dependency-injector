@@ -4,6 +4,16 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- Package metadata -->
+    <PackageId>PegasusHeavy.DependencyInjector</PackageId>
+    <Version>0.2.2</Version>
+    <Authors>Pegasus Heavy Industries</Authors>
+    <Description>C# bindings for the high-performance Rust dependency injection container</Description>
+    <PackageLicenseExpression>MIT OR Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/pegasusheavy/dependency-injector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/pegasusheavy/dependency-injector</RepositoryUrl>
+    <PackageTags>dependency-injection;di;ioc;container;rust;ffi;native</PackageTags>
   </PropertyGroup>
 
 </Project>
