@@ -68,6 +68,15 @@ export class DIError extends Error {
 }
 
 /**
+ * Platform-specific library names.
+ */
+const LIBRARY_NAMES: Record<string, string> = {
+  linux: "libdependency_injector.so",
+  darwin: "libdependency_injector.dylib",
+  win32: "dependency_injector.dll",
+};
+
+/**
  * Find the native library path.
  */
 function findLibraryPath(): string {
@@ -75,17 +84,28 @@ function findLibraryPath(): string {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  // Try multiple locations
+  const libName = LIBRARY_NAMES[process.platform];
+  if (!libName) {
+    throw new Error(`Unsupported platform: ${process.platform}`);
+  }
+
+  // Try multiple locations in order of preference
   const possiblePaths = [
-    // Development: relative to ffi directory
-    path.resolve(__dirname, "../../../target/release/libdependency_injector.so"),
-    path.resolve(__dirname, "../../../../target/release/libdependency_injector.so"),
-    path.resolve(__dirname, "../../../target/release/libdependency_injector.dylib"),
-    path.resolve(__dirname, "../../../../target/release/libdependency_injector.dylib"),
-    path.resolve(__dirname, "../../../target/release/dependency_injector.dll"),
-    path.resolve(__dirname, "../../../../target/release/dependency_injector.dll"),
-    // Custom path from environment
+    // 1. Custom path from environment (highest priority)
     process.env.DI_LIBRARY_PATH,
+
+    // 2. Downloaded pre-built library (from postinstall)
+    path.resolve(__dirname, "../native", libName),
+    path.resolve(__dirname, "../../native", libName),
+
+    // 3. Development: local cargo build
+    path.resolve(__dirname, "../../../target/release", libName),
+    path.resolve(__dirname, "../../../../target/release", libName),
+    path.resolve(__dirname, "../../../../../target/release", libName),
+
+    // 4. System paths (Linux/macOS)
+    `/usr/local/lib/${libName}`,
+    `/usr/lib/${libName}`,
   ].filter(Boolean) as string[];
 
   // Find first existing path
@@ -99,8 +119,15 @@ function findLibraryPath(): string {
     }
   }
 
-  // Return the first path and let koffi handle the error
-  return possiblePaths[0];
+  // Return helpful error message
+  throw new Error(
+    `Native library not found. Searched:\n` +
+    possiblePaths.map(p => `  - ${p}`).join('\n') +
+    `\n\nTo fix this:\n` +
+    `  1. Run: cargo rustc --release --features ffi --crate-type cdylib\n` +
+    `  2. Or set DI_LIBRARY_PATH environment variable\n` +
+    `  3. Or reinstall the package to download pre-built binaries`
+  );
 }
 
 // Define koffi types
@@ -109,15 +136,15 @@ const ServicePtr = koffi.pointer("DiService", koffi.opaque());
 
 // Load the native library
 let lib: ReturnType<typeof koffi.load>;
+let libraryPath: string;
 
 try {
-  const libPath = findLibraryPath();
-  lib = koffi.load(libPath);
+  libraryPath = findLibraryPath();
+  lib = koffi.load(libraryPath);
 } catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
   throw new Error(
-    `Failed to load dependency-injector native library. ` +
-      `Make sure you've built it with: cargo rustc --release --features ffi --crate-type cdylib\n` +
-      `Original error: ${error}`
+    `Failed to load dependency-injector native library.\n\n${message}`
   );
 }
 
@@ -384,6 +411,15 @@ export class Container {
    */
   static version(): string {
     return di_version();
+  }
+
+  /**
+   * Get the path to the loaded native library.
+   *
+   * @returns The absolute path to the native library.
+   */
+  static libraryPath(): string {
+    return libraryPath;
   }
 }
 

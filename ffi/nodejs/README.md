@@ -10,43 +10,46 @@ Node.js/TypeScript bindings for the high-performance Rust dependency injection c
 - 🧵 **Thread-Safe** - Safe to use in worker threads
 - 🔌 **FFI-Based** - Direct native bindings via koffi (no native compilation required)
 - ⚡ **SWC-Powered** - Lightning-fast builds with SWC
-
-## Prerequisites
-
-1. **pnpm** - This project requires pnpm as the package manager:
-
-```bash
-# Install pnpm if you don't have it
-npm install -g pnpm
-# Or use corepack (Node.js 16.10+)
-corepack enable
-```
-
-2. Build the Rust library:
-
-```bash
-cd /path/to/dependency-injector
-cargo rustc --release --features ffi --crate-type cdylib
-```
-
-3. Set the library path:
-
-```bash
-# Linux
-export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
-
-# macOS
-export DYLD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$DYLD_LIBRARY_PATH
-
-# Windows (add to PATH)
-set PATH=%PATH%;C:\path\to\dependency-injector\target\release
-```
+- 📥 **Pre-built Binaries** - Automatic download of pre-built native libraries
 
 ## Installation
 
 ```bash
 pnpm add @pegasusheavy/dependency-injector
 ```
+
+The package automatically downloads pre-built native libraries for:
+
+| Platform | Architecture |
+|----------|--------------|
+| Linux | x64, arm64 |
+| macOS | x64 (Intel), arm64 (Apple Silicon) |
+| Windows | x64 |
+
+### Manual Build (Optional)
+
+If pre-built binaries aren't available for your platform, or you want to build from source:
+
+```bash
+# Install Rust if needed
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Clone and build
+git clone https://github.com/pegasusheavy/dependency-injector
+cd dependency-injector
+cargo rustc --release --features ffi --crate-type cdylib
+
+# Point to your build (optional - package will auto-detect)
+export DI_LIBRARY_PATH=$(pwd)/target/release/libdependency_injector.so
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DI_LIBRARY_PATH` | Custom path to native library |
+| `DI_SKIP_DOWNLOAD` | Skip automatic download (for CI/offline) |
+| `DI_GITHUB_TOKEN` | GitHub token for rate limiting |
 
 ## Quick Start
 

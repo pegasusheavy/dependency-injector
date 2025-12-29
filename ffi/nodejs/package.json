@@ -8,6 +8,7 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
+    "postinstall": "node scripts/install.js",
     "build": "swc src -d dist --strip-leading-paths && tsc --emitDeclarationOnly",
     "build:swc": "swc src -d dist --strip-leading-paths",
     "build:types": "tsc --emitDeclarationOnly",
@@ -16,7 +17,7 @@
     "test:watch": "vitest",
     "example": "tsx examples/basic.ts",
     "lint": "eslint src --ext .ts",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist native",
     "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "keywords": [
@@ -55,6 +56,7 @@
     "dist/index.js.map",
     "dist/index.d.ts",
     "dist/index.d.ts.map",
+    "scripts/install.js",
     "README.md"
   ]
 }
