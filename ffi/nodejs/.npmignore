@@ -1,0 +1,113 @@
+# =============================================================================
+# NPM IGNORE - Files excluded from npm publish
+# =============================================================================
+# Note: Files in "files" array in package.json take precedence
+# This file excludes everything NOT in the "files" array
+
+# =============================================================================
+# SOURCE FILES (compiled to dist/)
+# =============================================================================
+src/
+*.ts
+!*.d.ts
+
+# =============================================================================
+# DEVELOPMENT & BUILD CONFIG
+# =============================================================================
+
+# TypeScript
+tsconfig.json
+tsconfig.*.json
+*.tsbuildinfo
+
+# SWC
+.swcrc
+
+# ESLint / Prettier
+.eslintrc*
+.eslintignore
+.prettierrc*
+.prettierignore
+eslint.config.*
+
+# Editor config
+.editorconfig
+
+# =============================================================================
+# TESTING
+# =============================================================================
+__tests__/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+test/
+tests/
+coverage/
+.nyc_output/
+jest.config.*
+vitest.config.*
+
+# =============================================================================
+# EXAMPLES
+# =============================================================================
+examples/
+
+# =============================================================================
+# DEVELOPMENT FILES
+# =============================================================================
+
+# Dependencies
+node_modules/
+
+# Lock files (pnpm-lock.yaml is useful but not needed in published package)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# npm config
+.npmrc
+
+# Environment
+.env
+.env.*
+
+# =============================================================================
+# IDE / EDITOR
+# =============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# =============================================================================
+# CI / CD
+# =============================================================================
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+azure-pipelines.yml
+Jenkinsfile
+
+# =============================================================================
+# DOCUMENTATION (README.md is included via files array)
+# =============================================================================
+docs/
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+
+# =============================================================================
+# MISC
+# =============================================================================
+*.log
+*.bak
+*.orig
+*.tmp
+.cache/
+tmp/
+temp/
+
