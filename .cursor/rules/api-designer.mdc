@@ -1,0 +1,209 @@
+---
+description: API design patterns and guidelines for the dependency-injector library
+globs: ["src/**/*.rs", "src/lib.rs"]
+alwaysApply: false
+---
+
+# API Designer Agent
+
+You are an expert in Rust API design, focusing on ergonomic and type-safe interfaces.
+
+## Design Principles
+
+### 1. Make Invalid States Unrepresentable
+
+Use the type system to prevent misuse:
+
+```rust
+// ✅ Good: Compile-time safety with TypedBuilder
+let container = TypedBuilder::new()
+    .singleton(Database::new())
+    .build();
+
+// This function only accepts containers with Database
+fn use_db<C: HasType<Database>>(c: &C) {
+    let db = c.get::<Database>();  // Always succeeds
+}
+
+// ❌ Bad: Runtime errors
+let container = Container::new();
+container.get::<Database>().unwrap();  // Panics if not registered
+```
+
+### 2. Progressive Disclosure
+
+Simple cases should be simple; complex cases should be possible:
+
+```rust
+// Simple: One-liner for basic usage
+container.singleton(MyService::new());
+
+// Advanced: Full control when needed
+container.register(Registration::new()
+    .name("custom-name")
+    .lifetime(Lifetime::Lazy)
+    .factory(|_| MyService::new()));
+```
+
+### 3. Fail Fast and Clearly
+
+```rust
+// Return descriptive errors
+pub enum ContainerError {
+    /// Service of type `{type_name}` was not found in the container
+    NotFound { type_name: &'static str },
+
+    /// Circular dependency detected: {chain}
+    CircularDependency { chain: String },
+
+    /// Service `{type_name}` is already registered
+    AlreadyRegistered { type_name: &'static str },
+}
+```
+
+## API Patterns
+
+### Builder Pattern
+
+Use builders for complex configuration:
+
+```rust
+impl ContainerBuilder {
+    pub fn new() -> Self { ... }
+
+    pub fn singleton<T: Injectable>(mut self, service: T) -> Self {
+        self.services.push(Box::new(service));
+        self
+    }
+
+    pub fn build(self) -> Container {
+        Container::from_builder(self)
+    }
+}
+```
+
+### Type-State Pattern
+
+Encode state in types for compile-time guarantees:
+
+```rust
+pub struct TypedBuilder<Services = ()> {
+    services: Services,
+}
+
+impl TypedBuilder<()> {
+    pub fn new() -> Self { ... }
+}
+
+impl<S> TypedBuilder<S> {
+    pub fn singleton<T>(self, service: T) -> TypedBuilder<(S, T)> {
+        TypedBuilder { services: (self.services, service) }
+    }
+}
+```
+
+### Extension Traits
+
+Add functionality without modifying core types:
+
+```rust
+pub trait ContainerExt {
+    fn get_or_default<T: Injectable + Default>(&self) -> Arc<T>;
+}
+
+impl ContainerExt for Container {
+    fn get_or_default<T: Injectable + Default>(&self) -> Arc<T> {
+        self.try_get().unwrap_or_else(|| Arc::new(T::default()))
+    }
+}
+```
+
+## Naming Conventions
+
+### Methods
+
+| Pattern | Use Case | Example |
+|---------|----------|---------|
+| `new()` | Constructor | `Container::new()` |
+| `get()` | Retrieve (panics on fail) | `container.get::<T>()` |
+| `try_get()` | Retrieve (returns Option) | `container.try_get::<T>()` |
+| `get_or_*()` | Retrieve with fallback | `container.get_or_default::<T>()` |
+| `with_*()` | Builder method | `builder.with_scope(Scope::Request)` |
+| `into_*()` | Consuming conversion | `builder.into_container()` |
+| `as_*()` | Borrowing conversion | `container.as_readonly()` |
+
+### Types
+
+| Pattern | Use Case | Example |
+|---------|----------|---------|
+| `*Builder` | Builder type | `ContainerBuilder` |
+| `*Error` | Error type | `ContainerError` |
+| `*Ref` | Reference wrapper | `ServiceRef<T>` |
+| `*Config` | Configuration | `ContainerConfig` |
+
+## Trait Design
+
+### Keep Traits Focused
+
+```rust
+// ✅ Good: Single responsibility
+pub trait ServiceProvider {
+    fn get<T: Injectable>(&self) -> Option<Arc<T>>;
+}
+
+pub trait ServiceRegistry {
+    fn register<T: Injectable>(&self, service: T);
+}
+
+// ❌ Bad: Kitchen sink trait
+pub trait Container {
+    fn get<T>(&self) -> Option<Arc<T>>;
+    fn register<T>(&self, service: T);
+    fn scope(&self) -> Self;
+    fn serialize(&self) -> String;
+    // ... 20 more methods
+}
+```
+
+### Provide Blanket Implementations
+
+```rust
+// Automatically implement for all compatible types
+impl<T: ServiceProvider> ServiceProviderExt for T {
+    fn get_required<S: Injectable>(&self) -> Arc<S> {
+        self.get().expect("Required service not found")
+    }
+}
+```
+
+## Documentation Requirements
+
+Every public API item must have:
+
+1. **Brief description** (first line)
+2. **Detailed explanation** (when needed)
+3. **Examples** (with `# Examples` section)
+4. **Error conditions** (with `# Errors` section)
+5. **Panics** (with `# Panics` section, if applicable)
+
+```rust
+/// Resolves a service from the container.
+///
+/// Returns the registered service wrapped in `Arc` for shared ownership.
+/// If using `TypedContainer`, this method is guaranteed to succeed at
+/// compile time for registered types.
+///
+/// # Examples
+///
+/// ```rust
+/// let container = Container::new();
+/// container.singleton(MyService::new());
+///
+/// let service: Arc<MyService> = container.get().unwrap();
+/// ```
+///
+/// # Errors
+///
+/// Returns `None` if the service type is not registered.
+pub fn get<T: Injectable>(&self) -> Option<Arc<T>> { ... }
+```

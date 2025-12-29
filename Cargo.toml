@@ -1,6 +1,6 @@
 [package]
 name = "dependency-injector"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 rust-version = "1.85"
 description = "High-performance, lock-free dependency injection container for Rust"
@@ -10,6 +10,9 @@ categories = ["development-tools", "rust-patterns", "concurrency"]
 readme = "README.md"
 repository = "https://github.com/pegasusheavy/dependency-injector"
 documentation = "https://docs.rs/dependency-injector"
+
+# Note: For FFI shared library builds, use:
+#   cargo rustc --release --features ffi --crate-type cdylib
 
 [features]
 default = ["logging"]
@@ -27,6 +30,10 @@ async = ["dep:tokio"]
 derive = ["dep:dependency-injector-derive"]
 # Perfect hashing for locked containers (~5ns faster resolution)
 perfect-hash = ["dep:boomphf"]
+# Heap profiling with dhat (for memory leak detection)
+dhat-heap = ["dep:dhat"]
+# FFI bindings for C/Go/Python interop
+ffi = []
 
 [dependencies]
 # Lock-free concurrent hashmap - much faster than RwLock<HashMap>
@@ -56,9 +63,16 @@ dependency-injector-derive = { version = "0.1.0", path = "dependency-injector-de
 # Minimal perfect hashing for locked containers (optional)
 boomphf = { version = "0.6", optional = true }
 
+# Heap profiler for memory leak detection (optional)
+dhat = { version = "0.3", optional = true }
+
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "time"] }
 criterion = { version = "0.5", features = ["html_reports"] }  # Pin to 0.5 for Rust 1.85 compatibility
+
+# External DI crates for comparison benchmarks
+shaku = "0.6"
+ferrous-di = "0.2"
 
 [[bench]]
 name = "container_bench"
@@ -72,3 +86,28 @@ harness = false
 version = "1"
 default-features = false
 features = ["user-hooks"]
+
+# Profile for memory profiling - optimized but with debug info
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = false
+
+# Profile for AddressSanitizer/LeakSanitizer builds
+[profile.sanitizer]
+inherits = "dev"
+opt-level = 1
+
+[[example]]
+name = "memory_profiler"
+path = "examples/memory_profiler.rs"
+
+[[example]]
+name = "derive"
+path = "examples/derive.rs"
+required-features = ["derive"]
+
+[[example]]
+name = "logging"
+path = "examples/logging.rs"
+required-features = ["logging"]

@@ -181,3 +181,74 @@
 .cta-subtitle {
   @apply text-lg text-slate-400 mb-8;
 }
+
+// Performance Section
+.performance-section {
+  @apply py-20 bg-slate-900/50;
+}
+
+.performance-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-6 mb-8;
+}
+
+.performance-card {
+  @apply p-6 rounded-xl text-center;
+  background-color: oklch(0.15 0.02 250);
+  border: 1px solid oklch(0.25 0.02 250);
+}
+
+.performance-value {
+  @apply text-4xl font-bold text-white mb-2;
+}
+
+.performance-unit {
+  @apply text-xl text-slate-400 ml-1;
+}
+
+.performance-label {
+  @apply text-sm text-slate-300 font-medium mb-1;
+}
+
+.performance-comparison {
+  @apply text-xs text-slate-500;
+}
+
+.performance-cta {
+  @apply text-center;
+}
+
+// FFI Section
+.ffi-section {
+  @apply py-20;
+}
+
+.ffi-grid {
+  @apply grid grid-cols-2 md:grid-cols-5 gap-4 mb-8;
+}
+
+.ffi-card {
+  @apply p-4 rounded-xl text-center transition-all duration-300;
+  background-color: oklch(0.15 0.02 250);
+  border: 1px solid oklch(0.25 0.02 250);
+
+  &:hover {
+    border-color: var(--color-rust-500);
+    transform: translateY(-2px);
+  }
+}
+
+.ffi-icon {
+  @apply text-3xl mb-2;
+}
+
+.ffi-lang {
+  @apply text-sm font-semibold text-white;
+}
+
+.ffi-time {
+  @apply text-xs text-slate-500;
+}
+
+.ffi-cta {
+  @apply text-center;
+}

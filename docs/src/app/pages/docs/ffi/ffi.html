@@ -1,0 +1,199 @@
+<div class="docs-page">
+  <div class="docs-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <ol>
+        <li><a routerLink="/"><fa-icon [icon]="['fas', 'rocket']" class="mr-1"></fa-icon>Home</a></li>
+        <li><span class="separator">/</span></li>
+        <li><a routerLink="/docs">Docs</a></li>
+        <li><span class="separator">/</span></li>
+        <li class="current">FFI Bindings</li>
+      </ol>
+    </nav>
+
+    <!-- Header -->
+    <header class="docs-header">
+      <h1><fa-icon [icon]="['fas', 'plug']" class="mr-3 text-rust-500"></fa-icon>FFI Bindings</h1>
+      <p class="lead">Use dependency-injector from Go, Node.js, Python, and C# via native FFI bindings.</p>
+    </header>
+
+    <!-- Language Cards -->
+    <div class="language-grid">
+      @for (lang of languages; track lang.name) {
+        <div class="language-card">
+          <div class="language-header">
+            <fa-icon [icon]="['fab', lang.icon]" class="language-icon"></fa-icon>
+            <h3>{{ lang.name }}</h3>
+          </div>
+          <p class="language-desc">{{ lang.description }}</p>
+          <code class="install-cmd">{{ lang.install }}</code>
+          <ul class="feature-list">
+            @for (feature of lang.features; track feature) {
+              <li><fa-icon [icon]="['fas', 'check']" class="text-green-400 mr-2"></fa-icon>{{ feature }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+
+    <!-- Content -->
+    <div class="docs-content">
+      <h2 id="building">Building the Shared Library</h2>
+      <p>Before using FFI bindings, build the native library with the <code>ffi</code> feature:</p>
+      <app-code-block filename="terminal" [code]="buildCode" />
+
+      <div class="info-callout">
+        <fa-icon [icon]="['fas', 'info-circle']" class="callout-icon"></fa-icon>
+        <div>
+          <strong>Library Path</strong>
+          <p>Set <code>LD_LIBRARY_PATH</code> (Linux), <code>DYLD_LIBRARY_PATH</code> (macOS), or add to <code>PATH</code> (Windows) before running your application.</p>
+        </div>
+      </div>
+
+      <h2 id="go">Go</h2>
+      <p>The Go bindings use cgo to call the native library directly. Services are serialized as JSON.</p>
+      <app-code-block filename="main.go" [code]="goCode" />
+
+      <h3>Key Features</h3>
+      <ul class="feature-list">
+        <li><code>RegisterValue()</code> - Auto-serializes Go structs to JSON</li>
+        <li><code>ResolveJSON()</code> - Deserializes into a struct pointer</li>
+        <li><code>TryResolve()</code> - Returns nil if not found (no error)</li>
+        <li><code>Scope()</code> - Creates hierarchical child containers</li>
+        <li>Sentinel errors: <code>di.ErrNotFound</code>, <code>di.ErrAlreadyRegistered</code></li>
+      </ul>
+
+      <h2 id="nodejs">Node.js / TypeScript</h2>
+      <p>TypeScript bindings use <a href="https://koffi.dev/" target="_blank" rel="noopener">koffi</a> - no native compilation required.</p>
+      <app-code-block filename="index.ts" [code]="nodejsCode" />
+
+      <h3>Key Features</h3>
+      <ul class="feature-list">
+        <li>Full TypeScript generics support</li>
+        <li><code>tryResolve()</code> - Returns null for missing services</li>
+        <li><code>DIError</code> with error codes for structured error handling</li>
+        <li>SWC-powered builds for fast compilation</li>
+        <li>Requires pnpm as package manager</li>
+      </ul>
+
+      <h2 id="python">Python</h2>
+      <p>Python bindings use built-in <code>ctypes</code> - zero dependencies required.</p>
+      <app-code-block filename="main.py" [code]="pythonCode" />
+
+      <h3>Key Features</h3>
+      <ul class="feature-list">
+        <li>Context manager support (<code>with Container() as c:</code>)</li>
+        <li><code>try_resolve()</code> - Returns None for missing services</li>
+        <li>Full type hints for IDE support</li>
+        <li><code>DIError</code> exception with error codes</li>
+        <li>Works with Python 3.10+</li>
+      </ul>
+
+      <h2 id="csharp">C# / .NET</h2>
+      <p>C# bindings use P/Invoke for native interop. Requires .NET 8.0 or later.</p>
+      <app-code-block filename="Program.cs" [code]="csharpCode" />
+
+      <h3>Key Features</h3>
+      <ul class="feature-list">
+        <li><code>IDisposable</code> pattern for resource management</li>
+        <li>Generic <code>Resolve&lt;T&gt;()</code> and <code>TryResolve&lt;T&gt;()</code></li>
+        <li>Record type support with System.Text.Json</li>
+        <li><code>DIException</code> with <code>DiErrorCode</code> enum</li>
+        <li>Auto-type inference with <code>Register&lt;T&gt;(instance)</code></li>
+      </ul>
+
+      <h2 id="scopes">Scoped Containers</h2>
+      <p>All FFI bindings support hierarchical scoped containers:</p>
+      <app-code-block filename="scopes.go" [code]="scopesCode" />
+
+      <div class="info-callout">
+        <fa-icon [icon]="['fas', 'lightbulb']" class="callout-icon text-yellow-400"></fa-icon>
+        <div>
+          <strong>Scoping Pattern</strong>
+          <p>Use scopes for request-level isolation in web servers. Child scopes inherit parent services but can override them. Parent containers never see child-scoped services.</p>
+        </div>
+      </div>
+
+      <h2 id="performance">Performance</h2>
+      <p>FFI overhead varies by language due to serialization and call overhead:</p>
+
+      <div class="perf-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Language</th>
+              <th>Singleton Resolution</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><fa-icon [icon]="['fab', 'rust']" class="mr-2"></fa-icon>Rust (native)</td>
+              <td class="perf-value">~9 ns</td>
+              <td>Hot cache path</td>
+            </tr>
+            <tr>
+              <td><fa-icon [icon]="['fab', 'golang']" class="mr-2"></fa-icon>Go</td>
+              <td class="perf-value">~300 ns</td>
+              <td>cgo + JSON unmarshal</td>
+            </tr>
+            <tr>
+              <td><fa-icon [icon]="['fab', 'python']" class="mr-2"></fa-icon>Python</td>
+              <td class="perf-value">~95 ns</td>
+              <td>ctypes + JSON decode</td>
+            </tr>
+            <tr>
+              <td><fa-icon [icon]="['fab', 'node-js']" class="mr-2"></fa-icon>Node.js</td>
+              <td class="perf-value">~1,800 ns</td>
+              <td>koffi + JSON parse</td>
+            </tr>
+            <tr>
+              <td><fa-icon [icon]="['fab', 'microsoft']" class="mr-2"></fa-icon>C#</td>
+              <td class="perf-value">~200 ns</td>
+              <td>P/Invoke + System.Text.Json</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-slate-400 text-sm mt-4">
+        * All measurements on 13th Gen Intel Core i9-13900K. See <a routerLink="/benchmarks">Benchmarks</a> for detailed comparisons.
+      </p>
+
+      <h2 id="memory">Memory Management</h2>
+      <p>All FFI bindings require explicit cleanup:</p>
+
+      <div class="memory-patterns">
+        <div class="pattern-card">
+          <h4><fa-icon [icon]="['fab', 'golang']" class="mr-2"></fa-icon>Go</h4>
+          <code>defer container.Free()</code>
+        </div>
+        <div class="pattern-card">
+          <h4><fa-icon [icon]="['fab', 'node-js']" class="mr-2"></fa-icon>Node.js</h4>
+          <code>try &#123; ... &#125; finally &#123; container.free() &#125;</code>
+        </div>
+        <div class="pattern-card">
+          <h4><fa-icon [icon]="['fab', 'python']" class="mr-2"></fa-icon>Python</h4>
+          <code>with Container() as c: ...</code>
+        </div>
+        <div class="pattern-card">
+          <h4><fa-icon [icon]="['fab', 'microsoft']" class="mr-2"></fa-icon>C#</h4>
+          <code>using var container = new Container();</code>
+        </div>
+      </div>
+
+      <h2 id="next-steps">Next Steps</h2>
+      <div class="next-steps">
+        <a routerLink="/benchmarks" class="next-step-card">
+          <h4><fa-icon [icon]="['fas', 'chart-bar']" class="mr-2"></fa-icon>Benchmarks <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>See detailed performance comparisons across all languages.</p>
+        </a>
+        <a routerLink="/docs/examples" class="next-step-card">
+          <h4><fa-icon [icon]="['fas', 'code']" class="mr-2"></fa-icon>Examples <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>Real-world usage patterns and integrations.</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+

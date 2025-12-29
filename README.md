@@ -22,14 +22,14 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dependency-injector = "0.1"
+dependency-injector = "0.2"
 ```
 
 ### Optional Features
 
 ```toml
 [dependencies]
-dependency-injector = { version = "0.1", features = ["logging-json"] }
+dependency-injector = { version = "0.2", features = ["logging-json"] }
 ```
 
 | Feature | Description |
@@ -322,14 +322,101 @@ cargo run --features logging-pretty
 The container is built for high-performance scenarios:
 
 - **Lock-free reads** using `DashMap`
+- **Thread-local hot cache** for sub-20ns resolution
 - **Minimal allocations** with `Arc` sharing
 - **No runtime reflection** - all type resolution at compile time
+
+### Cross-Language Benchmark Comparison
+
+| Language | Best Library | Singleton Resolution | Mixed Workload (100 ops) |
+|----------|-------------|---------------------|--------------------------|
+| **Rust** | **dependency-injector** | **17-32 ns** | **2.2 µs** |
+| Go | sync.Map | 15 ns | 7 µs |
+| C# | MS.Extensions.DI | 208 ns | 31 µs |
+| Python | dependency-injector | 95 ns | 15.7 µs |
+| Node.js | inversify | 1,829 ns | 15 µs |
+
+**Rust is 6-14x faster** than other languages' popular DI libraries for mixed workloads.
+
+*See [BENCHMARK_COMPARISON.md](BENCHMARK_COMPARISON.md) for full cross-language benchmarks*
+
+### Comparison with Other Rust DI Libraries
+
+| Library | Singleton Resolution | Mixed Workload |
+|---------|---------------------|----------------|
+| **dependency-injector** | ~17-27 ns | **2.2 µs** |
+| shaku | ~17-21 ns | 2.5-15 µs |
+| ferrous-di | ~57-70 ns | 7.6-11 µs |
+
+*See [RUST_DI_COMPARISON.md](RUST_DI_COMPARISON.md) for Rust-specific benchmarks*
 
 Run benchmarks locally:
 
 ```bash
-cargo bench
+# Internal benchmarks
+cargo bench --bench container_bench
+
+# Comparison against other Rust DI crates
+cargo bench --bench comparison_bench
 ```
+
+## FFI Bindings (Use from Other Languages)
+
+The library provides C-compatible FFI bindings for use from other languages:
+
+### Supported Languages
+
+| Language | Bindings | Example |
+|----------|----------|---------|
+| **Go** | Native CGO | `ffi/go/` |
+| **Python** | ctypes | `ffi/python/` |
+| **Node.js** | ffi-napi | `ffi/nodejs/` |
+| **C#** | P/Invoke | `ffi/csharp/` |
+| **C/C++** | Header file | `ffi/dependency_injector.h` |
+
+### Building FFI Library
+
+```bash
+# Build the shared library (cdylib)
+cargo rustc --release --features ffi --crate-type cdylib
+
+# Output locations:
+# Linux:   target/release/libdependency_injector.so
+# macOS:   target/release/libdependency_injector.dylib
+# Windows: target/release/dependency_injector.dll
+```
+
+### Quick Example (Python)
+
+```python
+from dependency_injector import Container
+
+container = Container()
+container.singleton("config", {"database": "postgres://localhost"})
+
+config = container.get("config")
+print(config)  # {"database": "postgres://localhost"}
+```
+
+### Quick Example (Go)
+
+```go
+package main
+
+import "github.com/pegasusheavy/dependency-injector/ffi/go/di"
+
+func main() {
+    container := di.NewContainer()
+    defer container.Free()
+
+    container.RegisterSingleton("config", `{"database": "postgres://localhost"}`)
+
+    config, _ := container.Resolve("config")
+    fmt.Println(config)
+}
+```
+
+*See [ffi/README.md](ffi/README.md) for complete FFI documentation*
 
 ## Fuzzing
 

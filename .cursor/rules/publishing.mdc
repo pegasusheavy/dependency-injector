@@ -1,0 +1,70 @@
+---
+description: Publishing and release process for crates.io
+globs: ["Cargo.toml", "CHANGELOG.md"]
+alwaysApply: false
+---
+
+# Publishing to crates.io
+
+## Pre-Release Checklist
+
+1. **Update version** in `Cargo.toml`
+2. **Update CHANGELOG.md** with release notes
+3. **Run all tests**: `cargo test --all-features`
+4. **Run clippy**: `cargo clippy --all-features -- -D warnings`
+5. **Check formatting**: `cargo fmt --check`
+6. **Verify docs build**: `cargo doc --no-deps`
+
+## Version Bumping
+
+Follow semantic versioning:
+- **MAJOR**: Breaking API changes
+- **MINOR**: New features, backward compatible
+- **PATCH**: Bug fixes, backward compatible
+
+## Release Process
+
+```bash
+# 1. Ensure on develop branch with all changes
+git checkout develop
+git pull
+
+# 2. Update version and changelog
+# Edit Cargo.toml and CHANGELOG.md
+
+# 3. Commit version bump
+git add Cargo.toml CHANGELOG.md
+git commit -m "chore(release): bump version to v0.x.y"
+
+# 4. Merge to main
+git checkout main
+git merge develop
+
+# 5. Tag the release (ALWAYS from main)
+git tag -a v0.x.y -m "Release v0.x.y"
+
+# 6. Push
+git push origin main --tags
+git checkout develop
+git push origin develop
+
+# 7. Publish to crates.io
+cargo publish -p dependency-injector-derive  # if changed
+cargo publish -p dependency-injector
+```
+
+## Workspace Publishing Order
+
+If publishing multiple crates:
+1. `dependency-injector-derive` (no dependencies on workspace)
+2. `dependency-injector` (depends on derive)
+
+## Verify Before Publishing
+
+```bash
+# Dry run
+cargo publish --dry-run
+
+# Check what will be published
+cargo package --list
+```

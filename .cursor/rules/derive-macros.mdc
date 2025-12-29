@@ -1,0 +1,248 @@
+---
+description: Procedural macro development for dependency-injector-derive
+globs: ["dependency-injector-derive/**/*.rs"]
+alwaysApply: false
+---
+
+# Derive Macros Agent
+
+You are an expert in Rust procedural macros, specializing in derive macros.
+
+## Crate Structure
+
+```
+dependency-injector-derive/
+├── src/
+│   ├── lib.rs          # Entry point, exports derives
+│   ├── service.rs      # #[derive(Service)] implementation
+│   └── inject.rs       # #[derive(Inject)] implementation
+├── tests/
+│   └── derive_tests.rs # Integration tests
+└── Cargo.toml
+```
+
+## Available Derives
+
+### `#[derive(Service)]`
+
+Implements the `Injectable` trait automatically:
+
+```rust
+use dependency_injector_derive::Service;
+
+#[derive(Service)]
+pub struct MyService {
+    // fields
+}
+
+// Generates:
+impl Injectable for MyService {}
+// Injectable requires: Send + Sync + 'static
+```
+
+### `#[derive(Inject)]`
+
+Generates constructor injection:
+
+```rust
+use dependency_injector_derive::Inject;
+
+#[derive(Inject)]
+pub struct UserService {
+    #[inject]
+    db: Arc<Database>,
+    #[inject]
+    cache: Arc<CacheService>,
+}
+
+// Generates:
+impl UserService {
+    pub fn inject(container: &Container) -> Self {
+        Self {
+            db: container.get::<Database>().unwrap(),
+            cache: container.get::<CacheService>().unwrap(),
+        }
+    }
+}
+```
+
+## Implementation Patterns
+
+### Parse Input
+
+Use `syn` to parse derive input:
+
+```rust
+use syn::{parse_macro_input, DeriveInput, Data, Fields};
+
+#[proc_macro_derive(Service)]
+pub fn derive_service(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &input.ident;
+    let generics = &input.generics;
+
+    // Generate implementation
+    let expanded = quote! {
+        impl #generics Injectable for #name #generics {}
+    };
+
+    TokenStream::from(expanded)
+}
+```
+
+### Handle Generics
+
+Properly handle generic parameters:
+
+```rust
+let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+quote! {
+    impl #impl_generics Injectable for #name #ty_generics #where_clause {}
+}
+```
+
+### Process Attributes
+
+Parse field attributes:
+
+```rust
+fn has_inject_attr(field: &Field) -> bool {
+    field.attrs.iter().any(|attr| {
+        attr.path().is_ident("inject")
+    })
+}
+
+fn get_inject_fields(data: &Data) -> Vec<&Field> {
+    match data {
+        Data::Struct(data) => {
+            match &data.fields {
+                Fields::Named(fields) => {
+                    fields.named.iter()
+                        .filter(|f| has_inject_attr(f))
+                        .collect()
+                }
+                _ => vec![]
+            }
+        }
+        _ => vec![]
+    }
+}
+```
+
+### Generate Code
+
+Use `quote` for code generation:
+
+```rust
+use quote::{quote, format_ident};
+
+let field_injections = inject_fields.iter().map(|field| {
+    let name = &field.ident;
+    let ty = &field.ty;
+    quote! {
+        #name: container.get::<#ty>().expect(
+            concat!("Failed to inject ", stringify!(#ty))
+        )
+    }
+});
+
+quote! {
+    impl #name {
+        pub fn inject(container: &Container) -> Self {
+            Self {
+                #(#field_injections),*
+            }
+        }
+    }
+}
+```
+
+## Error Handling
+
+Provide helpful compile-time errors:
+
+```rust
+use syn::Error;
+
+fn validate_struct(input: &DeriveInput) -> Result<(), Error> {
+    match &input.data {
+        Data::Struct(_) => Ok(()),
+        Data::Enum(_) => Err(Error::new_spanned(
+            input,
+            "#[derive(Service)] can only be used on structs"
+        )),
+        Data::Union(_) => Err(Error::new_spanned(
+            input,
+            "#[derive(Service)] cannot be used on unions"
+        )),
+    }
+}
+
+#[proc_macro_derive(Service)]
+pub fn derive_service(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    if let Err(err) = validate_struct(&input) {
+        return err.to_compile_error().into();
+    }
+
+    // ... rest of implementation
+}
+```
+
+## Testing Macros
+
+### Compile-Time Tests
+
+Use `trybuild` for compile-fail tests:
+
+```rust
+#[test]
+fn compile_tests() {
+    let t = trybuild::TestCases::new();
+    t.pass("tests/cases/01-basic.rs");
+    t.compile_fail("tests/cases/02-enum-error.rs");
+}
+```
+
+### Runtime Tests
+
+Test generated code behavior:
+
+```rust
+#[test]
+fn test_inject_derive() {
+    #[derive(Inject)]
+    struct TestService {
+        #[inject]
+        dep: Arc<Dependency>,
+    }
+
+    let container = Container::new();
+    container.singleton(Dependency::new());
+
+    let service = TestService::inject(&container);
+    assert!(Arc::ptr_eq(&service.dep, &container.get::<Dependency>().unwrap()));
+}
+```
+
+## Dependencies
+
+```toml
+[dependencies]
+syn = { version = "2", features = ["full", "parsing"] }
+quote = "1"
+proc-macro2 = "1"
+
+[dev-dependencies]
+trybuild = "1"
+```
+
+## Common Pitfalls
+
+1. **Hygiene**: Use `quote_spanned!` for better error locations
+2. **Generics**: Always handle generic parameters and where clauses
+3. **Visibility**: Respect field visibility in generated code
+4. **Docs**: Generated items should have documentation
+5. **Tests**: Test both success and failure cases

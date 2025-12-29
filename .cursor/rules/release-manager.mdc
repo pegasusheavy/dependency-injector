@@ -1,0 +1,187 @@
+---
+description: Release and deployment management for the dependency-injector project
+globs: ["scripts/**/*", "Cargo.toml", "**/package.json", "**/pyproject.toml", "**/*.csproj"]
+alwaysApply: false
+---
+
+# Release Manager Agent
+
+You are an expert in release engineering for multi-language projects.
+
+## Release Workflow
+
+### 1. Pre-Release Checklist
+
+```bash
+# Ensure all tests pass
+cargo test
+cargo test --all-features
+
+# Run benchmarks to verify performance
+cargo bench
+
+# Check for clippy warnings
+cargo clippy -- -D warnings
+
+# Verify documentation builds
+cargo doc --no-deps
+```
+
+### 2. Version Bump Strategy
+
+Follow Semantic Versioning:
+- **MAJOR**: Breaking API changes
+- **MINOR**: New features, backward compatible
+- **PATCH**: Bug fixes, backward compatible
+
+Files to update:
+- `Cargo.toml` (main crate)
+- `dependency-injector-derive/Cargo.toml` (derive crate)
+- `ffi/nodejs/package.json`
+- `ffi/python/pyproject.toml`
+- `ffi/csharp/DependencyInjector/DependencyInjector.csproj`
+
+### 3. Changelog Update
+
+Add entry to `CHANGELOG.md` with:
+- Version number and date
+- Added/Changed/Fixed/Security sections
+- Issue/PR references where applicable
+
+### 4. Git Workflow
+
+```bash
+# Ensure on develop branch with latest
+git checkout develop
+git pull origin develop
+
+# Create release commit
+git add -A
+git commit -m "chore(changelog): prepare release v0.x.y"
+
+# Merge to main for release
+git checkout main
+git merge develop
+
+# Tag release (ALWAYS from main)
+git tag -a v0.x.y -m "Release v0.x.y"
+
+# Push everything
+git push origin main --tags
+git checkout develop
+git merge main
+git push origin develop
+```
+
+## Deploy Scripts
+
+### Rust Crate (`scripts/deploy.sh`)
+
+```bash
+./scripts/deploy.sh [--dry-run]
+```
+
+Publishes to crates.io:
+1. `dependency-injector-derive` (derive macros)
+2. `dependency-injector` (main crate)
+
+### FFI Packages (`scripts/deploy-ffi.sh`)
+
+```bash
+./scripts/deploy-ffi.sh [nodejs|python|csharp|go] [--dry-run]
+```
+
+| Package | Registry | Command |
+|---------|----------|---------|
+| Node.js | npm | `pnpm publish` |
+| Python | PyPI | `twine upload` |
+| C# | NuGet | `dotnet nuget push` |
+| Go | GitHub | Tag-based releases |
+
+## Required Credentials
+
+### Environment Variables
+
+```bash
+# Rust (crates.io)
+CARGO_REGISTRY_TOKEN=your_token
+
+# Node.js (npm)
+NPM_TOKEN=your_token
+
+# Python (PyPI)
+TWINE_USERNAME=__token__
+TWINE_PASSWORD=your_token
+
+# C# (NuGet)
+NUGET_API_KEY=your_key
+```
+
+### Login Commands
+
+```bash
+# Rust
+cargo login
+
+# Node.js
+pnpm login
+
+# Python (uses token in env)
+
+# C# (uses API key in push command)
+```
+
+## Pre-Publish Verification
+
+### Native Library Build
+
+```bash
+# Build release library for FFI
+cargo build --release
+
+# Verify library exists
+ls -la target/release/libdependency_injector.*
+```
+
+### Test FFI Bindings
+
+```bash
+# Node.js
+cd ffi/nodejs && pnpm test
+
+# Python
+cd ffi/python && pytest
+
+# Go
+cd ffi/go && go test ./...
+
+# C#
+cd ffi/csharp && dotnet test
+```
+
+## Rollback Procedure
+
+If a release has issues:
+
+1. **Yank the release** (doesn't delete, just hides):
+   ```bash
+   cargo yank --version 0.x.y
+   npm deprecate dependency-injector-ffi@0.x.y "Bug in release"
+   ```
+
+2. **Fix and release patch**:
+   ```bash
+   # Bump to 0.x.y+1
+   # Fix issue
+   # Release new version
+   ```
+
+## CI/CD Integration
+
+GitHub Actions workflow triggers on:
+- Push to `main` → Run tests
+- Tag `v*` → Build and publish
+
+Key workflow files:
+- `.github/workflows/ci.yml` - Continuous integration
+- `.github/workflows/release.yml` - Release automation

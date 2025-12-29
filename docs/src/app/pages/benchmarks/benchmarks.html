@@ -373,6 +373,115 @@
         </div>
       </div>
 
+      <!-- Cross-Language Comparison -->
+      <div class="comparison-section mb-12">
+        <h2 class="text-2xl font-bold text-white mb-6">
+          <fa-icon [icon]="['fas', 'globe']" class="mr-2 text-rust-500"></fa-icon>
+          Cross-Language Comparison
+        </h2>
+
+        <p class="text-slate-400 mb-6">
+          How does dependency-injector compare to DI libraries in other languages? We benchmarked against Go, Node.js, Python, and C# frameworks.
+        </p>
+
+        <!-- Cross-Language Table -->
+        <div class="benchmark-table-container mb-8">
+          <table class="benchmark-table">
+            <thead>
+              <tr>
+                <th>Language</th>
+                <th>Library</th>
+                <th>Singleton Resolution</th>
+                <th>Mixed Workload (100 ops)</th>
+                <th>vs Rust</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="bg-rust-500/10">
+                <td><span class="text-rust-400 font-semibold">Rust</span></td>
+                <td><code class="benchmark-name text-rust-400">dependency-injector</code></td>
+                <td class="font-mono text-green-400">17-32 ns</td>
+                <td class="font-mono text-green-400">2.2 µs</td>
+                <td class="font-mono text-green-400">1.0x</td>
+              </tr>
+              <tr>
+                <td><span class="text-blue-400">Go</span></td>
+                <td><code class="benchmark-name">sync.Map</code></td>
+                <td class="font-mono text-white">15 ns</td>
+                <td class="font-mono text-white">7 µs</td>
+                <td class="font-mono text-yellow-400">3x slower</td>
+              </tr>
+              <tr>
+                <td><span class="text-blue-400">Go</span></td>
+                <td><code class="benchmark-name">samber/do</code></td>
+                <td class="font-mono text-slate-400">767 ns</td>
+                <td class="font-mono text-slate-400">125 µs</td>
+                <td class="font-mono text-red-400">57x slower</td>
+              </tr>
+              <tr>
+                <td><span class="text-purple-400">C#</span></td>
+                <td><code class="benchmark-name">MS.Extensions.DI</code></td>
+                <td class="font-mono text-white">208 ns</td>
+                <td class="font-mono text-white">31 µs</td>
+                <td class="font-mono text-yellow-400">14x slower</td>
+              </tr>
+              <tr>
+                <td><span class="text-yellow-400">Python</span></td>
+                <td><code class="benchmark-name">dependency-injector</code></td>
+                <td class="font-mono text-white">95 ns</td>
+                <td class="font-mono text-white">15.7 µs</td>
+                <td class="font-mono text-yellow-400">7x slower</td>
+              </tr>
+              <tr>
+                <td><span class="text-green-400">Node.js</span></td>
+                <td><code class="benchmark-name">inversify</code></td>
+                <td class="font-mono text-slate-400">1,829 ns</td>
+                <td class="font-mono text-slate-400">15 µs</td>
+                <td class="font-mono text-red-400">7x slower</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Key Insights -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="comparison-card">
+            <div class="comparison-header">
+              <fa-icon [icon]="['fas', 'trophy']" class="text-yellow-500 mr-2"></fa-icon>
+              Fastest Overall
+            </div>
+            <p class="comparison-text">
+              Rust achieves <strong class="text-white">17-32ns</strong> singleton resolution — competitive with Go's sync.Map while providing full DI features.
+            </p>
+          </div>
+
+          <div class="comparison-card">
+            <div class="comparison-header">
+              <fa-icon [icon]="['fas', 'rocket']" class="text-rust-500 mr-2"></fa-icon>
+              6-57x Faster Workloads
+            </div>
+            <p class="comparison-text">
+              For mixed workloads (resolves + scope creation), Rust is <strong class="text-white">6-57x faster</strong> than popular DI libraries in other languages.
+            </p>
+          </div>
+
+          <div class="comparison-card">
+            <div class="comparison-header">
+              <fa-icon [icon]="['fas', 'plug']" class="text-blue-500 mr-2"></fa-icon>
+              FFI Available
+            </div>
+            <p class="comparison-text">
+              Use dependency-injector from <strong class="text-white">Go, Python, Node.js, and C#</strong> via our FFI bindings with near-native performance.
+            </p>
+          </div>
+        </div>
+
+        <p class="text-slate-500 text-sm">
+          <fa-icon [icon]="['fas', 'info-circle']" class="mr-1"></fa-icon>
+          See <a href="https://github.com/pegasusheavy/dependency-injector/blob/main/BENCHMARK_COMPARISON.md" target="_blank" class="text-rust-400 hover:underline">BENCHMARK_COMPARISON.md</a> for complete cross-language benchmarks.
+        </p>
+      </div>
+
       <!-- Methodology -->
       <div class="methodology-section">
         <h2 class="text-2xl font-bold text-white mb-6">

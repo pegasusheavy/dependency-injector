@@ -1,0 +1,76 @@
+---
+description: Performance optimization guidelines for the DI container
+globs: ["src/**/*.rs", "benches/**/*.rs"]
+alwaysApply: false
+---
+
+# Performance Guidelines
+
+## Target Metrics
+
+The library targets these performance goals:
+- **Singleton resolution**: < 10ns
+- **Transient resolution**: < 50ns
+- **Scope creation**: < 100ns
+- **Contains check**: < 5ns
+
+## Hot Path Optimizations
+
+### Thread-Local Hot Cache
+The container uses a thread-local hot cache for frequently accessed services:
+- 4-slot LRU cache per thread
+- Uses `u64` hash of `TypeId` for fast comparison
+- Avoids `DashMap` lookup for cached services
+
+### Avoid in Hot Paths
+- Allocations (use pre-allocated buffers)
+- Virtual dispatch (use monomorphization)
+- Atomic operations beyond necessary
+- Hash map resizing
+
+### Prefer in Hot Paths
+- Stack allocation
+- Inline functions
+- Direct field access
+- Bitwise operations for flags
+
+## Benchmarking
+
+Always benchmark before and after optimization:
+
+```bash
+# Run comparison benchmarks
+cargo bench --bench comparison_bench
+
+# Run container benchmarks
+cargo bench --bench container_bench
+```
+
+## Profiling Tools
+
+### CPU Profiling
+```bash
+# With perf
+perf record cargo bench
+perf report
+
+# With flamegraph
+cargo flamegraph --bench container_bench
+```
+
+### Memory Profiling
+```bash
+# With dhat
+cargo run --example memory_profiler --features dhat-heap
+
+# With heaptrack
+heaptrack cargo run --example memory_profiler
+```
+
+## Common Optimizations Applied
+
+1. **DashMap with reduced shards** - Child scopes use 4 shards instead of default
+2. **TypeId hashing** - Use `ahash` for faster TypeId hashing
+3. **UnsafeCell for thread-locals** - Eliminates RefCell borrow checking overhead
+4. **Arc pointer reuse** - Clone Arc instead of re-resolving
+5. **Perfect hashing** - Optional feature for locked containers

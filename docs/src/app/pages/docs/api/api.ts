@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { SeoService } from '../../../services/seo.service';
 
 @Component({
   selector: 'app-api',
@@ -8,7 +9,9 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
   templateUrl: './api.html',
   styleUrl: './api.scss'
 })
-export class ApiPage {
+export class ApiPage implements OnInit {
+  private readonly seo = inject(SeoService);
+
   containerMethods = [
     { name: 'new()', description: 'Creates a new empty container', returns: 'Container' },
     { name: 'singleton<T>(value: T)', description: 'Registers a singleton service with an immediate value', returns: '()' },
@@ -25,4 +28,8 @@ export class ApiPage {
     { name: 'NotFound', description: 'The requested service type was not found in the container or any parent scope' },
     { name: 'FactoryPanicked', description: 'The factory function panicked during service creation' },
   ];
+
+  ngOnInit(): void {
+    this.seo.setApiSeo();
+  }
 }

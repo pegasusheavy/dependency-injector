@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CodeBlockComponent } from '../../components/code-block/code-block';
 import { CODE_SNIPPETS } from '../../data/code-snippets';
+import { SeoService } from '../../services/seo.service';
 
 @Component({
   selector: 'app-home',
@@ -10,7 +11,9 @@ import { CODE_SNIPPETS } from '../../data/code-snippets';
   templateUrl: './home.html',
   styleUrl: './home.scss'
 })
-export class HomePage {
+export class HomePage implements OnInit {
+  private readonly seo = inject(SeoService);
+
   installCode = CODE_SNIPPETS.install;
   exampleCode = CODE_SNIPPETS.example;
 
@@ -19,8 +22,8 @@ export class HomePage {
     { title: 'Type-Safe', description: 'Compile-time type checking with zero runtime overhead. Errors caught before deployment.', icon: 'shield' },
     { title: 'Zero-Config', description: 'Any Send + Sync + \'static type is automatically injectable. No boilerplate required.', icon: 'cubes' },
     { title: 'Scoped Containers', description: 'Hierarchical scopes with full parent chain resolution. Perfect for request-scoped services.', icon: 'layer-group' },
-    { title: 'Flexible Lifetimes', description: 'Singleton, lazy singleton, and transient lifetimes. Choose what fits your use case.', icon: 'flask' },
-    { title: 'Observable', description: 'Optional tracing integration for debugging and monitoring service resolution.', icon: 'chart-line' }
+    { title: 'Cross-Language FFI', description: 'Use from Go, Python, Node.js, and C# via native FFI bindings. One container, all languages.', icon: 'globe' },
+    { title: '6-57x Faster', description: 'Benchmarked against Go, Python, Node.js, C# DI frameworks. Rust delivers unmatched performance.', icon: 'rocket' }
   ];
 
   benefits = [
@@ -29,4 +32,8 @@ export class HomePage {
     { title: 'Lazy by Default', description: 'Services created on first access. No wasted initialization.' },
     { title: 'Scoped Testing', description: 'Create child scopes to override services for testing without affecting parents.' }
   ];
+
+  ngOnInit(): void {
+    this.seo.setHomeSeo();
+  }
 }

@@ -40,9 +40,20 @@ import {
   faUsers,
   faLockOpen,
   faListCheck,
-  faMicrochip
+  faMicrochip,
+  faGlobe,
+  faPlug,
+  faTrophy,
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
-import { faGithub } from '@fortawesome/free-brands-svg-icons';
+import {
+  faGithub,
+  faGolang,
+  faNodeJs,
+  faPython,
+  faMicrosoft,
+  faRust
+} from '@fortawesome/free-brands-svg-icons';
 
 import { routes } from './app.routes';
 
@@ -96,7 +107,16 @@ export function setupIconLibrary(library: FaIconLibrary) {
     faLockOpen,
     faListCheck,
     faMicrochip,
+    faGlobe,
+    faPlug,
+    faTrophy,
+    faInfoCircle,
     // Brand icons
-    faGithub
+    faGithub,
+    faGolang,
+    faNodeJs,
+    faPython,
+    faMicrosoft,
+    faRust
   );
 }

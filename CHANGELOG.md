@@ -5,19 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] - 2025-12-21
+## [0.2.2] - 2025-12-28
+
+### Highlights
+- **FFI Bindings** - Use dependency-injector from Go, Python, Node.js, and C#
+- **Cross-Language Benchmarks** - Comprehensive comparison against 5 languages
+- **Compile-Time Safety** - Type-state builder and verified service providers
+- **Memory Verified** - Zero leaks confirmed by both dhat and Valgrind
+
+### Added
+- **FFI Support** - C-compatible bindings for cross-language integration
+  - Go package with CGO bindings (`ffi/go/`)
+  - Python package with ctypes (`ffi/python/`)
+  - Node.js package with koffi (`ffi/nodejs/`) - no native compilation needed
+  - C# library with P/Invoke (`ffi/csharp/`)
+  - C header file (`ffi/dependency_injector.h`)
+  - `di_resolve_json()` FFI function for JSON-based resolution
+- **Compile-Time Safety** - New type-safe DI patterns
+  - `TypedBuilder` / `TypedContainer` - Type-state builder pattern
+  - `HasType<T>` trait for compile-time dependency verification
+  - `Service` trait for declaring service dependencies
+  - `ServiceProvider` trait for automatic registration
+  - `Resolvable` trait for generic resolution (tuples, Option, etc.)
+  - `ServiceModule` trait for grouping related services
+- **Memory Profiling** - `memory_profiler` example with dhat integration
+- **Deploy Scripts** - Automated release tooling
+  - `scripts/deploy.sh` - Rust library deployment to crates.io
+  - `scripts/deploy-ffi.sh` - FFI package deployment (npm, PyPI, NuGet)
+- **Cursor Agents** - AI-assisted development workflows
+  - `rust-di-expert` - DI pattern guidance
+  - `performance-optimizer` - Benchmark analysis
+  - `docs-writer` - Documentation generation
+  - `test-engineer` - Test coverage
+  - `release-manager` - Publishing workflow
 
 ### Changed
-- Replaced `RefCell` with `UnsafeCell` in thread-local hot cache (Phase 12)
-- Store pre-computed `u64` type hash instead of `TypeId` (Phase 13)
-- Added `#[cold]` annotation to `resolve_from_parents` (Phase 14)
-- Fast path for root containers skips parent chain walk (Phase 15)
-- Added `#[inline(always)]` to hot cache methods
+- Node.js FFI bindings now use `koffi` instead of `ffi-napi` (no native compilation)
+- Node.js package requires `pnpm` as package manager (enforced via `only-allow`)
+- `cdylib` crate type now conditional on `ffi` feature (use `cargo rustc --features ffi --crate-type cdylib`)
+- Go FFI uses `di_resolve_json()` for cleaner JSON handling
+- Improved `nil` safety in Go `Container.Free()` method
+
+### Documentation
+- **New FFI Bindings page** (`/docs/ffi`) with comprehensive language guides
+- **SEO/AEO Enhancements**
+  - JSON-LD structured data (SoftwareSourceCode, FAQPage, HowTo schemas)
+  - Open Graph and Twitter Card meta tags
+  - `sitemap.xml` and `robots.txt`
+  - Per-page dynamic meta tags via `SeoService`
+- Updated examples page with cross-language code snippets
+- Updated getting-started with FFI links
+- Added `BENCHMARK_COMPARISON.md` for 5-language comparison
+- Added `RUST_DI_COMPARISON.md` for Rust ecosystem comparison
+
+### Benchmarks
+Cross-language comparison results:
+
+| Language | Library | Singleton | Mixed Workload |
+|----------|---------|-----------|----------------|
+| **Rust** | dependency-injector | **17-32 ns** | **2.2 µs** |
+| Go | samber/do | 767 ns | 125 µs |
+| C# | MS.Extensions.DI | 208 ns | 31 µs |
+| Python | dependency-injector | 95 ns | 15.7 µs |
+| Node.js | inversify | 1,829 ns | 15 µs |
+
+Rust DI comparison:
+
+| Library | Singleton | Mixed Workload |
+|---------|-----------|----------------|
+| **dependency-injector** | **17-27 ns** | **2.2 µs** |
+| shaku | 17-21 ns | 2.5-15 µs |
+| ferrous-di | 57-70 ns | 7.6-11 µs |
+
+### Memory Profiling
+Verified with dhat and Valgrind:
+- **Definitely lost: 0 bytes**
+- **Indirectly lost: 0 bytes**
+- **Possibly lost: 0 bytes**
+- Total allocations: 51,808, properly freed: 51,804 (99.99%)
+
+## [0.2.1] - 2025-12-21
+
+### Highlights
+- **~9.4ns singleton resolution** - now only 12% overhead vs manual DI
+- **20% faster error paths** - root container fast-path optimization
+
+### Changed
+- Replaced `RefCell` with `UnsafeCell` in thread-local hot cache
+- Store pre-computed `u64` type hash instead of `TypeId` (faster comparisons)
+- Added `#[cold]` annotation to `resolve_from_parents` (better branch prediction)
+- Fast path for root containers skips parent chain walk
+- Added `#[inline(always)]` to critical hot cache methods
 
 ### Performance
-- `get_singleton`: 9.8ns → **9.4ns** (4% faster)
-- `try_get_not_found`: 13.7ns → **10.9ns** (20% faster)
-- Gap to manual DI reduced from 1.4ns to **1.0ns** (12% overhead)
+| Operation | Before | After | Improvement |
+|-----------|--------|-------|-------------|
+| `get_singleton` | 9.8 ns | 9.4 ns | 4% faster |
+| `try_get_not_found` | 13.7 ns | 10.9 ns | 20% faster |
+| Gap to manual DI | 1.4 ns | 1.0 ns | 12% overhead |
 
 ## [0.2.0] - 2025-12-21
 
@@ -152,6 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scoped containers with parent resolution
 - Lock-free concurrent access via DashMap
 
+[0.2.2]: https://github.com/pegasusheavy/dependency-injector/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/pegasusheavy/dependency-injector/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.12...v0.2.0
 [0.1.12]: https://github.com/pegasusheavy/dependency-injector/compare/v0.1.11...v0.1.12

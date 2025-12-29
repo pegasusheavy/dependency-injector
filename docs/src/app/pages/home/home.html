@@ -75,6 +75,91 @@
   </div>
 </section>
 
+<!-- Performance Section -->
+<section class="performance-section">
+  <div class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Unmatched Performance</h2>
+      <p class="section-subtitle">
+        Benchmarked against popular DI libraries across 5 languages. Rust wins.
+      </p>
+    </div>
+
+    <div class="performance-grid">
+      <div class="performance-card">
+        <div class="performance-value">~9<span class="performance-unit">ns</span></div>
+        <div class="performance-label">Singleton Resolution</div>
+        <div class="performance-comparison">Hot cache, ~1ns from manual DI</div>
+      </div>
+      <div class="performance-card">
+        <div class="performance-value">2.2<span class="performance-unit">µs</span></div>
+        <div class="performance-label">Mixed Workload (100 ops)</div>
+        <div class="performance-comparison">vs 31µs C#, 125µs Go</div>
+      </div>
+      <div class="performance-card">
+        <div class="performance-value">6-57<span class="performance-unit">x</span></div>
+        <div class="performance-label">Faster Than Others</div>
+        <div class="performance-comparison">Go, Python, Node.js, C#</div>
+      </div>
+    </div>
+
+    <div class="performance-cta">
+      <a routerLink="/benchmarks" class="btn btn-secondary">
+        <fa-icon [icon]="['fas', 'chart-line']" class="btn-icon-left"></fa-icon>
+        View Full Benchmarks
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FFI Section -->
+<section class="ffi-section">
+  <div class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Use From Any Language</h2>
+      <p class="section-subtitle">
+        Native FFI bindings let you use the same high-performance container from Go, Python, Node.js, and C#.
+      </p>
+    </div>
+
+    <div class="ffi-grid">
+      <div class="ffi-card">
+        <div class="ffi-icon">🦀</div>
+        <div class="ffi-lang">Rust</div>
+        <div class="ffi-time">Native</div>
+      </div>
+      <div class="ffi-card">
+        <div class="ffi-icon">🐹</div>
+        <div class="ffi-lang">Go</div>
+        <div class="ffi-time">CGO</div>
+      </div>
+      <div class="ffi-card">
+        <div class="ffi-icon">🐍</div>
+        <div class="ffi-lang">Python</div>
+        <div class="ffi-time">ctypes</div>
+      </div>
+      <div class="ffi-card">
+        <div class="ffi-icon">🟨</div>
+        <div class="ffi-lang">Node.js</div>
+        <div class="ffi-time">ffi-napi</div>
+      </div>
+      <div class="ffi-card">
+        <div class="ffi-icon">🟪</div>
+        <div class="ffi-lang">C#</div>
+        <div class="ffi-time">P/Invoke</div>
+      </div>
+    </div>
+
+    <div class="ffi-cta">
+      <a href="https://github.com/pegasusheavy/dependency-injector/tree/main/ffi" target="_blank" rel="noopener" class="btn btn-secondary">
+        <fa-icon [icon]="['fas', 'plug']" class="btn-icon-left"></fa-icon>
+        FFI Documentation
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="btn-icon"></fa-icon>
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- Code Example Section -->
 <section class="example-section">
   <div class="section-container">

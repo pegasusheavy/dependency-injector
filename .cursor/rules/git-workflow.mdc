@@ -1,36 +1,70 @@
 ---
-description: Git workflow and release tagging conventions
+description: Git workflow and release conventions
 globs: ["**/*"]
+alwaysApply: true
 ---
 
-# Git Workflow Rules
+# Git Workflow
 
-## Branching Strategy
+## Branch Strategy
 
-- **main** - Stable releases only. All tags are created from this branch.
-- **develop** - Active development. Features and fixes are merged here first.
+- `main` - Stable releases only, protected branch
+- `develop` - Integration branch for features
+- Feature branches from `develop`
 
-## Release Process
+## Tags and Releases
 
-1. Complete work on `develop` branch
-2. Create PR from `develop` to `main`
-3. Merge PR after review
-4. Create tag on `main` branch (never on develop)
-
-## Tagging
-
-- Tags must ALWAYS be created from the `main` branch
-- Use semantic versioning: `vX.Y.Z`
-- Include release notes in tag annotation
+**IMPORTANT**: Tags are ALWAYS created from the `main` branch, never from `develop`.
 
 ```bash
+# Correct workflow for releases:
 git checkout main
-git tag -a vX.Y.Z -m "Release vX.Y.Z - Description"
-git push origin vX.Y.Z
+git merge develop
+git tag -a v0.x.y -m "Release v0.x.y"
+git push origin main --tags
 ```
 
-## Never Do
+## Conventional Commits
 
-- Never create tags on `develop` branch
-- Never push directly to `main` (use PRs)
-- Never skip the develop → main merge flow for releases
+Use conventional commit format with scope:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+[optional footer]
+```
+
+### Types
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation changes
+- `perf` - Performance improvements
+- `refactor` - Code refactoring
+- `test` - Adding/updating tests
+- `chore` - Maintenance tasks
+- `ci` - CI/CD changes
+
+### Scopes
+- `container` - Container implementation
+- `storage` - Storage/caching layer
+- `factory` - Factory/provider system
+- `scope` - Scoping functionality
+- `macros` - Derive macros (dependency-injector-derive)
+- `docs` - Documentation site
+- `bench` - Benchmarks
+- `examples` - Example code
+- `changelog` - Changelog updates
+
+### Examples
+
+```
+feat(container): add batch registration API
+fix(storage): resolve race condition in hot cache
+docs(macros): add derive macro documentation
+perf(container): optimize singleton resolution to 8ns
+```
+
+**DO NOT** use bare types without scopes:
+- ❌ `docs: update readme`
+- ✅ `docs(readme): update installation instructions`

@@ -62,11 +62,21 @@
 
       <app-code-block filename="lifetimes.rs" [code]="lifetimesCode" />
 
+      <h2 id="other-languages">Other Languages</h2>
+      <p>
+        dependency-injector also provides FFI bindings for Go, Node.js, Python, and C#.
+        See the <a routerLink="/docs/ffi">FFI Bindings</a> documentation to use the container from other languages.
+      </p>
+
       <h2 id="next-steps">Next Steps</h2>
       <div class="next-steps">
         <a routerLink="/docs/guide" class="next-step-card">
           <h4><fa-icon [icon]="['fas', 'book']" class="mr-2"></fa-icon>Guide <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
           <p>Deep dive into containers, scopes, and advanced patterns.</p>
+        </a>
+        <a routerLink="/docs/ffi" class="next-step-card">
+          <h4><fa-icon [icon]="['fas', 'plug']" class="mr-2"></fa-icon>FFI Bindings <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
+          <p>Use from Go, Node.js, Python, and C#.</p>
         </a>
         <a routerLink="/docs/examples" class="next-step-card">
           <h4><fa-icon [icon]="['fas', 'code']" class="mr-2"></fa-icon>Examples <fa-icon [icon]="['fas', 'chevron-right']" class="ml-2"></fa-icon></h4>
