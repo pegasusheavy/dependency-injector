@@ -7,30 +7,9 @@ Python bindings for the high-performance Rust dependency injection container.
 - 🚀 **High Performance** - Native Rust implementation with ~10ns resolution
 - 🐍 **Pythonic API** - Clean, idiomatic Python interface
 - 🔄 **Scoped Containers** - Hierarchical scopes for request-level isolation
-- 📝 **Type Hints** - Full type annotation support
+- 📝 **Type Hints** - Full type annotation support with PEP 561
 - 🔌 **Zero Dependencies** - Uses only Python's built-in `ctypes`
-
-## Prerequisites
-
-1. Build the Rust library:
-
-```bash
-cd /path/to/dependency-injector
-cargo rustc --release --features ffi --crate-type cdylib
-```
-
-2. Set the library path:
-
-```bash
-# Linux
-export LD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$LD_LIBRARY_PATH
-
-# macOS
-export DYLD_LIBRARY_PATH=/path/to/dependency-injector/target/release:$DYLD_LIBRARY_PATH
-
-# Windows
-set PATH=%PATH%;C:\path\to\dependency-injector\target\release
-```
+- 📥 **Pre-built Wheels** - Native libraries bundled for all major platforms
 
 ## Installation
 
@@ -38,11 +17,48 @@ set PATH=%PATH%;C:\path\to\dependency-injector\target\release
 pip install dependency-injector-rust
 ```
 
-Or install from source:
+Pre-built wheels are available for:
+
+| Platform | Architecture |
+|----------|--------------|
+| Linux | x86_64, aarch64 |
+| macOS | x86_64 (Intel), arm64 (Apple Silicon) |
+| Windows | x86_64 |
+
+### Manual Build (Optional)
+
+If pre-built wheels aren't available for your platform, or you want to build from source:
 
 ```bash
-cd ffi/python
-pip install -e .
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Clone and build
+git clone https://github.com/pegasusheavy/dependency-injector
+cd dependency-injector
+cargo rustc --release --features ffi --crate-type cdylib
+
+# Install Python package
+pip install ./ffi/python
+
+# Or point to your build
+export DI_LIBRARY_PATH=$(pwd)/target/release/libdependency_injector.so
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DI_LIBRARY_PATH` | Custom path to native library |
+| `DI_SKIP_DOWNLOAD` | Skip automatic download (for offline/CI) |
+| `DI_GITHUB_TOKEN` | GitHub token for download rate limiting |
+
+### Download Pre-built Library
+
+If you installed from source distribution (sdist), you can download the native library:
+
+```bash
+python -m scripts.download_native
 ```
 
 ## Quick Start

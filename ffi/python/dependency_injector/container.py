@@ -59,37 +59,67 @@ class DIError(Exception):
         return base
 
 
-def _find_library() -> str:
-    """Find the native library path."""
-    # Check environment variable first
-    if env_path := os.environ.get("DI_LIBRARY_PATH"):
-        return env_path
-
-    # Platform-specific library names
+def _get_library_name() -> str:
+    """Get the platform-specific library name."""
     if sys.platform == "win32":
-        lib_name = "dependency_injector.dll"
+        return "dependency_injector.dll"
     elif sys.platform == "darwin":
-        lib_name = "libdependency_injector.dylib"
+        return "libdependency_injector.dylib"
     else:
-        lib_name = "libdependency_injector.so"
+        return "libdependency_injector.so"
 
-    # Try various locations
-    search_paths = [
-        # Relative to this file (development)
-        Path(__file__).parent.parent.parent.parent / "target" / "release" / lib_name,
-        # One more level up (from ffi/python/dependency_injector)
-        Path(__file__).parent.parent.parent.parent.parent / "target" / "release" / lib_name,
-        # From LD_LIBRARY_PATH or system
+
+def _find_library() -> str:
+    """Find the native library path.
+    
+    Search order:
+    1. DI_LIBRARY_PATH environment variable
+    2. Bundled native library (in package's native/ directory)
+    3. Downloaded native library (in package's native/ directory)
+    4. Local cargo build (target/release/)
+    5. System paths
+    """
+    # Check environment variable first (highest priority)
+    if env_path := os.environ.get("DI_LIBRARY_PATH"):
+        if Path(env_path).exists():
+            return env_path
+
+    lib_name = _get_library_name()
+    package_dir = Path(__file__).parent
+
+    # Search paths in order of preference
+    search_paths: list[Path | str] = [
+        # 1. Bundled in package (from wheel with native library)
+        package_dir / "native" / lib_name,
+        
+        # 2. Development: local cargo build
+        package_dir.parent.parent.parent / "target" / "release" / lib_name,
+        package_dir.parent.parent.parent.parent / "target" / "release" / lib_name,
+        package_dir.parent.parent.parent.parent.parent / "target" / "release" / lib_name,
+        
+        # 3. System paths (Linux/macOS)
+        Path("/usr/local/lib") / lib_name,
+        Path("/usr/lib") / lib_name,
+        
+        # 4. Fallback to system library search
         lib_name,
     ]
 
     for path in search_paths:
         if isinstance(path, Path) and path.exists():
             return str(path)
-        elif isinstance(path, str):
-            return path
 
+    # Return system name and let ctypes try to find it
     return lib_name
+
+
+def get_library_path() -> str:
+    """Get the path to the loaded native library.
+    
+    Returns:
+        The path to the native library that was loaded.
+    """
+    return _lib_path
 
 
 # Load the native library

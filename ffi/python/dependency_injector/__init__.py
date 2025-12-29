@@ -23,7 +23,7 @@ Or using context manager:
     ...     print(config)
 """
 
-from .container import Container, DIError, ErrorCode
+from .container import Container, DIError, ErrorCode, get_library_path
 
-__all__ = ["Container", "DIError", "ErrorCode"]
+__all__ = ["Container", "DIError", "ErrorCode", "get_library_path"]
 __version__ = "0.2.2"

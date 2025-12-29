@@ -2,10 +2,10 @@
 
 /**
  * Post-install script to download pre-built native library.
- * 
+ *
  * This script automatically downloads the correct pre-built native library
  * for the current platform and architecture from GitHub releases.
- * 
+ *
  * Environment variables:
  * - DI_LIBRARY_PATH: Skip download and use this path instead
  * - DI_SKIP_DOWNLOAD: Skip download (for local development)
@@ -88,7 +88,7 @@ function httpsGet(url, options = {}) {
  */
 async function downloadFile(url, dest) {
   const res = await httpsGet(url);
-  
+
   return new Promise((resolve, reject) => {
     const file = createWriteStream(dest);
     res.pipe(file);
@@ -109,7 +109,7 @@ async function downloadFile(url, dest) {
 async function getDownloadUrl(version, assetName) {
   const tag = version.startsWith('v') ? version : `v${version}`;
   const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/${tag}`;
-  
+
   const res = await httpsGet(apiUrl, {
     headers: { 'Accept': 'application/vnd.github.v3+json' },
   });
@@ -215,9 +215,9 @@ async function install() {
   try {
     const downloadUrl = await getDownloadUrl(PACKAGE_VERSION, assetName);
     console.log(`   URL: ${downloadUrl}`);
-    
+
     await downloadFile(downloadUrl, outputPath);
-    
+
     // Make executable on Unix
     if (process.platform !== 'win32') {
       fs.chmodSync(outputPath, 0o755);
@@ -232,7 +232,7 @@ async function install() {
     console.error('  2. Set DI_LIBRARY_PATH to point to an existing library');
     console.error('  3. Set DI_SKIP_DOWNLOAD=1 to skip this step');
     console.error('');
-    
+
     // Don't fail the install - the library might be built later
     console.warn('⚠️  Continuing without pre-built library');
   }
