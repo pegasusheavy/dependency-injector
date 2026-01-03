@@ -326,6 +326,12 @@ mod tests {
     #[derive(Clone)]
     struct UserService;
 
+    impl DeclaresDeps for UserService {
+        fn dependency_names() -> &'static [&'static str] {
+            &["Database", "Cache"]
+        }
+    }
+
     #[test]
     fn test_typed_builder_basic() {
         let container = TypedBuilder::new()
@@ -389,12 +395,6 @@ mod tests {
 
     #[test]
     fn test_with_dependencies() {
-        impl DeclaresDeps for UserService {
-            fn dependency_names() -> &'static [&'static str] {
-                &["Database", "Cache"]
-            }
-        }
-
         // Register deps first, then dependent service
         let container = TypedBuilder::new()
             .singleton(Database { url: "pg".into() })
