@@ -11,6 +11,56 @@ readme = "README.md"
 repository = "https://github.com/pegasusheavy/dependency-injector"
 documentation = "https://docs.rs/dependency-injector"
 
+# Files to exclude from crates.io publish
+exclude = [
+    # Development tooling
+    ".cursor/",
+    ".github/",
+    ".vscode/",
+    ".idea/",
+    ".cargo-husky/",
+
+    # Documentation site (Angular)
+    "docs/",
+
+    # FFI bindings (published separately)
+    "ffi/",
+
+    # Benchmarks
+    "benches/",
+    "benchmarks/",
+    "*.bench.rs",
+    "BENCHMARK_COMPARISON.md",
+    "RUST_DI_COMPARISON.md",
+
+    # Examples (keep in crate, but exclude extras)
+    "examples/memory_profiler.rs",
+
+    # Scripts
+    "scripts/",
+
+    # Profiling artifacts
+    "*.profraw",
+    "*.profdata",
+    "dhat-heap.json",
+    "flamegraph.svg",
+
+    # CI/CD
+    ".gitignore",
+    ".gitattributes",
+    "codecov.yml",
+    "rustfmt.toml",
+    "clippy.toml",
+    ".editorconfig",
+
+    # Misc development files
+    "TODO.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "*.bak",
+    "*.orig",
+]
+
 # Note: For FFI shared library builds, use:
 #   cargo rustc --release --features ffi --crate-type cdylib
 

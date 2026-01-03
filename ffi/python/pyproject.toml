@@ -46,6 +46,14 @@ Issues = "https://github.com/pegasusheavy/dependency-injector/issues"
 where = ["."]
 include = ["dependency_injector*"]
 
+[tool.setuptools.package-data]
+dependency_injector = [
+    "native/*.so",
+    "native/*.dylib",
+    "native/*.dll",
+    "py.typed",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

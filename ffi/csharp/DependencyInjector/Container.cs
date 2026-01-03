@@ -64,6 +64,14 @@ namespace DependencyInjector
         private bool _disposed;
 
         /// <summary>
+        /// Static constructor to initialize the native library resolver.
+        /// </summary>
+        static Container()
+        {
+            NativeLibraryResolver.Initialize();
+        }
+
+        /// <summary>
         /// Gets the library version.
         /// </summary>
         public static string Version
@@ -74,6 +82,11 @@ namespace DependencyInjector
                 return Marshal.PtrToStringUTF8(ptr) ?? "unknown";
             }
         }
+
+        /// <summary>
+        /// Gets the path to the loaded native library.
+        /// </summary>
+        public static string? LibraryPath => NativeLibraryResolver.LibraryPath;
 
         /// <summary>
         /// Creates a new dependency injection container.

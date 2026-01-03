@@ -1,0 +1,25 @@
+# Include documentation
+include README.md
+include LICENSE*
+
+# Include type stubs marker
+include dependency_injector/py.typed
+
+# Include native libraries if present (for wheel builds)
+recursive-include dependency_injector/native *.so *.dylib *.dll
+
+# Include scripts for source builds
+recursive-include scripts *.py
+
+# Exclude compiled Python files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+
+# Exclude test and development files
+prune tests
+prune examples
+prune .pytest_cache
+prune .mypy_cache
+prune .ruff_cache
+
