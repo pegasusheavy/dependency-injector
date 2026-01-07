@@ -230,11 +230,7 @@ impl ServiceStorage {
     #[inline]
     pub fn child(self: &Arc<Self>) -> Self {
         Self {
-            factories: DashMap::with_capacity_and_hasher_and_shard_amount(
-                0,
-                RandomState::new(),
-                8,
-            ),
+            factories: DashMap::with_capacity_and_hasher_and_shard_amount(0, RandomState::new(), 8),
             parent: Some(Arc::clone(self)),
         }
     }
@@ -353,12 +349,16 @@ impl FrozenStorage {
                 mphf: boomphf::Mphf::new(1.7, &[]),
                 factories: Vec::new(),
                 type_ids: Vec::new(),
-                parent: storage.parent.as_ref().map(|p| Arc::new(Self::from_storage(p))),
+                parent: storage
+                    .parent
+                    .as_ref()
+                    .map(|p| Arc::new(Self::from_storage(p))),
             };
         }
 
         // Create hashable type IDs for MPHF
-        let hashable_ids: Vec<HashableTypeId> = entries.iter().map(|(id, _)| HashableTypeId(*id)).collect();
+        let hashable_ids: Vec<HashableTypeId> =
+            entries.iter().map(|(id, _)| HashableTypeId(*id)).collect();
 
         // Create MPHF with gamma=1.7 (good balance of speed vs memory)
         let mphf = boomphf::Mphf::new(1.7, &hashable_ids);
@@ -378,7 +378,10 @@ impl FrozenStorage {
         let type_ids: Vec<TypeId> = indexed_type_ids.into_iter().flatten().collect();
 
         // Freeze parent if it exists
-        let parent = storage.parent.as_ref().map(|p| Arc::new(Self::from_storage(p)));
+        let parent = storage
+            .parent
+            .as_ref()
+            .map(|p| Arc::new(Self::from_storage(p)));
 
         Self {
             mphf,
@@ -510,9 +513,15 @@ mod tests {
     #[test]
     fn test_frozen_storage() {
         let storage = ServiceStorage::new();
-        storage.insert(TypeId::of::<TestService>(), AnyFactory::singleton(TestService { value: 42 }));
+        storage.insert(
+            TypeId::of::<TestService>(),
+            AnyFactory::singleton(TestService { value: 42 }),
+        );
         storage.insert(TypeId::of::<i32>(), AnyFactory::singleton(123i32));
-        storage.insert(TypeId::of::<String>(), AnyFactory::singleton("hello".to_string()));
+        storage.insert(
+            TypeId::of::<String>(),
+            AnyFactory::singleton("hello".to_string()),
+        );
 
         let frozen = FrozenStorage::from_storage(&storage);
 

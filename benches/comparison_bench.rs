@@ -203,7 +203,7 @@ mod dashmap_di {
 // ============================================================================
 
 mod shaku_di {
-    use shaku::{module, Component, Interface, HasComponent};
+    use shaku::{Component, HasComponent, Interface, module};
     use std::sync::Arc;
 
     // Define interfaces
@@ -274,7 +274,7 @@ mod shaku_di {
 // ============================================================================
 
 mod ferrous_di_bench {
-    use ferrous_di::{ServiceCollection, ServiceProvider, Resolver, ResolverContext};
+    use ferrous_di::{Resolver, ResolverContext, ServiceCollection, ServiceProvider};
     use std::sync::Arc;
 
     #[derive(Clone, Debug)]
@@ -326,9 +326,7 @@ fn bench_singleton_resolution(c: &mut Criterion) {
 
     // Manual DI (baseline)
     let manual = manual_di::Container::new();
-    group.bench_function("manual_di", |b| {
-        b.iter(|| black_box(manual.config()))
-    });
+    group.bench_function("manual_di", |b| b.iter(|| black_box(manual.config())));
 
     // HashMap DI
     let hashmap = hashmap_di::Container::new();
@@ -372,9 +370,7 @@ fn bench_deep_dependency_chain(c: &mut Criterion) {
 
     // Manual DI (baseline) - 4 level dependency chain
     let manual = manual_di::Container::new();
-    group.bench_function("manual_di", |b| {
-        b.iter(|| black_box(manual.user_service()))
-    });
+    group.bench_function("manual_di", |b| b.iter(|| black_box(manual.user_service())));
 
     // HashMap DI
     let hashmap = hashmap_di::Container::new();
@@ -440,9 +436,7 @@ fn bench_container_creation(c: &mut Criterion) {
         b.iter(|| black_box(dashmap_di::Container::new()))
     });
 
-    group.bench_function("shaku", |b| {
-        b.iter(|| black_box(shaku_di::create_module()))
-    });
+    group.bench_function("shaku", |b| b.iter(|| black_box(shaku_di::create_module())));
 
     group.bench_function("ferrous_di", |b| {
         b.iter(|| black_box(ferrous_di_bench::create_provider()))
@@ -697,9 +691,7 @@ fn bench_service_count_scaling(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("dependency_injector", count),
             &count,
-            |b, _| {
-                b.iter(|| black_box(di.get::<Config>().unwrap()))
-            },
+            |b, _| b.iter(|| black_box(di.get::<Config>().unwrap())),
         );
 
         // DashMap basic

@@ -4,12 +4,12 @@
 //! resolves dependencies with minimal overhead.
 
 use crate::factory::AnyFactory;
-use crate::storage::{downcast_arc_unchecked, ServiceStorage};
+use crate::storage::{ServiceStorage, downcast_arc_unchecked};
 use crate::{DiError, Injectable, Result};
 use std::any::{Any, TypeId};
 use std::cell::UnsafeCell;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(feature = "logging")]
 use tracing::{debug, trace};
@@ -313,7 +313,8 @@ impl Container {
         );
 
         // Phase 2: Use enum-based AnyFactory directly
-        self.storage.insert(type_id, AnyFactory::singleton(instance));
+        self.storage
+            .insert(type_id, AnyFactory::singleton(instance));
     }
 
     /// Register a lazy singleton service.
@@ -549,7 +550,11 @@ impl Container {
     /// Phase 14 optimization: Marked as cold to improve branch prediction in the
     /// hot path - most resolutions hit the cache and don't need parent traversal.
     #[cold]
-    fn resolve_from_parents<T: Injectable>(&self, type_id: &TypeId, storage_ptr: usize) -> Result<Arc<T>> {
+    fn resolve_from_parents<T: Injectable>(
+        &self,
+        type_id: &TypeId,
+        storage_ptr: usize,
+    ) -> Result<Arc<T>> {
         let type_name = std::any::type_name::<T>();
 
         #[cfg(feature = "logging")]
@@ -857,7 +862,9 @@ impl Container {
         let start_count = self.storage.len();
 
         // Create a zero-cost batch registrar that wraps the storage
-        f(BatchRegistrar { storage: &self.storage });
+        f(BatchRegistrar {
+            storage: &self.storage,
+        });
 
         #[cfg(feature = "logging")]
         {
@@ -919,7 +926,8 @@ impl<'a> BatchBuilder<'a> {
     /// Register a singleton and continue the chain
     #[inline]
     pub fn singleton<T: Injectable>(self, instance: T) -> Self {
-        self.storage.insert(TypeId::of::<T>(), AnyFactory::singleton(instance));
+        self.storage
+            .insert(TypeId::of::<T>(), AnyFactory::singleton(instance));
         Self {
             storage: self.storage,
             #[cfg(feature = "logging")]
@@ -933,7 +941,8 @@ impl<'a> BatchBuilder<'a> {
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
-        self.storage.insert(TypeId::of::<T>(), AnyFactory::lazy(factory));
+        self.storage
+            .insert(TypeId::of::<T>(), AnyFactory::lazy(factory));
         Self {
             storage: self.storage,
             #[cfg(feature = "logging")]
@@ -947,7 +956,8 @@ impl<'a> BatchBuilder<'a> {
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
-        self.storage.insert(TypeId::of::<T>(), AnyFactory::transient(factory));
+        self.storage
+            .insert(TypeId::of::<T>(), AnyFactory::transient(factory));
         Self {
             storage: self.storage,
             #[cfg(feature = "logging")]
@@ -980,7 +990,8 @@ impl<'a> BatchRegistrar<'a> {
     /// Register a singleton service (inserted immediately)
     #[inline]
     pub fn singleton<T: Injectable>(&self, instance: T) {
-        self.storage.insert(TypeId::of::<T>(), AnyFactory::singleton(instance));
+        self.storage
+            .insert(TypeId::of::<T>(), AnyFactory::singleton(instance));
     }
 
     /// Register a lazy singleton service (inserted immediately)
@@ -989,7 +1000,8 @@ impl<'a> BatchRegistrar<'a> {
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
-        self.storage.insert(TypeId::of::<T>(), AnyFactory::lazy(factory));
+        self.storage
+            .insert(TypeId::of::<T>(), AnyFactory::lazy(factory));
     }
 
     /// Register a transient service (inserted immediately)
@@ -998,7 +1010,8 @@ impl<'a> BatchRegistrar<'a> {
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
-        self.storage.insert(TypeId::of::<T>(), AnyFactory::transient(factory));
+        self.storage
+            .insert(TypeId::of::<T>(), AnyFactory::transient(factory));
     }
 }
 
@@ -1157,7 +1170,9 @@ impl ScopePool {
                     "Pool empty, creating new scope"
                 );
                 (
-                    Arc::new(ServiceStorage::with_parent(Arc::clone(&self.parent_storage))),
+                    Arc::new(ServiceStorage::with_parent(Arc::clone(
+                        &self.parent_storage,
+                    ))),
                     Arc::new(AtomicBool::new(false)),
                 )
             }
@@ -1528,9 +1543,18 @@ mod tests {
         leaf.singleton(LeafService(4));
 
         // Leaf should be able to access all ancestor services
-        assert!(leaf.contains::<RootService>(), "Should find root service in leaf");
-        assert!(leaf.contains::<MiddleService>(), "Should find middle service in leaf");
-        assert!(leaf.contains::<LeafService>(), "Should find leaf service in leaf");
+        assert!(
+            leaf.contains::<RootService>(),
+            "Should find root service in leaf"
+        );
+        assert!(
+            leaf.contains::<MiddleService>(),
+            "Should find middle service in leaf"
+        );
+        assert!(
+            leaf.contains::<LeafService>(),
+            "Should find leaf service in leaf"
+        );
 
         // Verify resolution works
         let root_svc = leaf.get::<RootService>().unwrap();

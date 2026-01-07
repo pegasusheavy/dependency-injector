@@ -588,4 +588,3 @@ mod tests {
         assert!(container.contains::<Cache>());
     }
 }
-

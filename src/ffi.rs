@@ -21,7 +21,7 @@
 
 use std::any::Any;
 use std::collections::HashMap;
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{CStr, CString, c_char};
 use std::ptr;
 use std::sync::{Arc, RwLock};
 
@@ -425,10 +425,7 @@ pub unsafe extern "C" fn di_resolve_json(
 /// # Returns
 /// 1 if the service is registered, 0 if not, -1 on error.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn di_contains(
-    container: *mut DiContainer,
-    type_name: *const c_char,
-) -> i32 {
+pub unsafe extern "C" fn di_contains(container: *mut DiContainer, type_name: *const c_char) -> i32 {
     if container.is_null() || type_name.is_null() {
         return -1;
     }
@@ -679,4 +676,3 @@ mod tests {
         }
     }
 }
-

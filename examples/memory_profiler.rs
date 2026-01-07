@@ -72,7 +72,9 @@ struct DbUserRepository {
 
 impl DbUserRepository {
     fn find_user(&self, id: u64) -> Option<String> {
-        let results = self.db.query(&format!("SELECT * FROM users WHERE id = {}", id));
+        let results = self
+            .db
+            .query(&format!("SELECT * FROM users WHERE id = {}", id));
         results.into_iter().next()
     }
 }
@@ -120,7 +122,10 @@ fn profile_singletons(iterations: usize) {
 
 /// Test lazy singleton creation
 fn profile_lazy_singletons(iterations: usize) {
-    println!("\n=== Profiling Lazy Singletons ({} iterations) ===", iterations);
+    println!(
+        "\n=== Profiling Lazy Singletons ({} iterations) ===",
+        iterations
+    );
 
     for i in 0..iterations {
         let container = Container::new();
@@ -201,7 +206,10 @@ fn profile_scopes(iterations: usize) {
 
 /// Test nested scopes
 fn profile_nested_scopes(iterations: usize) {
-    println!("\n=== Profiling Nested Scopes ({} iterations) ===", iterations);
+    println!(
+        "\n=== Profiling Nested Scopes ({} iterations) ===",
+        iterations
+    );
 
     let container = Container::new();
 
@@ -244,7 +252,10 @@ fn profile_nested_scopes(iterations: usize) {
 
 /// Test complex dependency graph
 fn profile_complex_dependencies(iterations: usize) {
-    println!("\n=== Profiling Complex Dependencies ({} iterations) ===", iterations);
+    println!(
+        "\n=== Profiling Complex Dependencies ({} iterations) ===",
+        iterations
+    );
 
     for i in 0..iterations {
         let container = Container::new();
@@ -281,7 +292,10 @@ fn profile_complex_dependencies(iterations: usize) {
 
 /// Test rapid container creation/destruction
 fn profile_container_lifecycle(iterations: usize) {
-    println!("\n=== Profiling Container Lifecycle ({} iterations) ===", iterations);
+    println!(
+        "\n=== Profiling Container Lifecycle ({} iterations) ===",
+        iterations
+    );
 
     for i in 0..iterations {
         let container = Container::new();
@@ -312,7 +326,10 @@ fn profile_container_lifecycle(iterations: usize) {
 
 /// Test large allocations with cache-like service
 fn profile_large_allocations(iterations: usize) {
-    println!("\n=== Profiling Large Allocations ({} iterations) ===", iterations);
+    println!(
+        "\n=== Profiling Large Allocations ({} iterations) ===",
+        iterations
+    );
 
     for i in 0..iterations {
         let container = Container::new();
@@ -345,7 +362,10 @@ fn profile_large_allocations(iterations: usize) {
 
 /// Test concurrent-like access patterns (single-threaded simulation)
 fn profile_access_patterns(iterations: usize) {
-    println!("\n=== Profiling Access Patterns ({} iterations) ===", iterations);
+    println!(
+        "\n=== Profiling Access Patterns ({} iterations) ===",
+        iterations
+    );
 
     let container = Container::new();
 

@@ -61,7 +61,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Data, Fields, Type, Attribute};
+use syn::{Attribute, Data, DeriveInput, Fields, Type, parse_macro_input};
 
 /// Derive macro for automatic dependency injection.
 ///
@@ -106,19 +106,16 @@ pub fn derive_inject(input: TokenStream) -> TokenStream {
             _ => {
                 return syn::Error::new_spanned(
                     &input,
-                    "Inject can only be derived for structs with named fields"
+                    "Inject can only be derived for structs with named fields",
                 )
                 .to_compile_error()
                 .into();
             }
         },
         _ => {
-            return syn::Error::new_spanned(
-                &input,
-                "Inject can only be derived for structs"
-            )
-            .to_compile_error()
-            .into();
+            return syn::Error::new_spanned(&input, "Inject can only be derived for structs")
+                .to_compile_error()
+                .into();
         }
     };
 
@@ -141,7 +138,7 @@ pub fn derive_inject(input: TokenStream) -> TokenStream {
                 } else {
                     return syn::Error::new_spanned(
                         field_type,
-                        "Fields marked with #[inject] must have type Arc<T>"
+                        "Fields marked with #[inject] must have type Arc<T>",
                     )
                     .to_compile_error()
                     .into();
@@ -156,7 +153,7 @@ pub fn derive_inject(input: TokenStream) -> TokenStream {
                 } else {
                     return syn::Error::new_spanned(
                         field_type,
-                        "Fields marked with #[inject(optional)] must have type Option<Arc<T>>"
+                        "Fields marked with #[inject(optional)] must have type Option<Arc<T>>",
                     )
                     .to_compile_error()
                     .into();
@@ -346,19 +343,16 @@ pub fn derive_service(input: TokenStream) -> TokenStream {
             _ => {
                 return syn::Error::new_spanned(
                     &input,
-                    "Service can only be derived for structs with named fields"
+                    "Service can only be derived for structs with named fields",
                 )
                 .to_compile_error()
                 .into();
             }
         },
         _ => {
-            return syn::Error::new_spanned(
-                &input,
-                "Service can only be derived for structs"
-            )
-            .to_compile_error()
-            .into();
+            return syn::Error::new_spanned(&input, "Service can only be derived for structs")
+                .to_compile_error()
+                .into();
         }
     };
 
@@ -378,7 +372,8 @@ pub fn derive_service(input: TokenStream) -> TokenStream {
             Some(DepAttr::Required) => {
                 // Field is Arc<T>, extract T for dependency type
                 if extract_arc_inner_type(field_type).is_some() {
-                    let dep_name = syn::Ident::new(&format!("__dep_{}", dep_index), field_name.span());
+                    let dep_name =
+                        syn::Ident::new(&format!("__dep_{}", dep_index), field_name.span());
                     dep_types.push(quote! { #field_type });
                     dep_names.push(dep_name.clone());
                     field_inits.push(quote! { #field_name: #dep_name });
@@ -386,7 +381,7 @@ pub fn derive_service(input: TokenStream) -> TokenStream {
                 } else {
                     return syn::Error::new_spanned(
                         field_type,
-                        "Fields marked with #[dep] must have type Arc<T>"
+                        "Fields marked with #[dep] must have type Arc<T>",
                     )
                     .to_compile_error()
                     .into();
@@ -395,7 +390,8 @@ pub fn derive_service(input: TokenStream) -> TokenStream {
             Some(DepAttr::Optional) => {
                 // Field is Option<Arc<T>>
                 if extract_option_arc_inner_type(field_type).is_some() {
-                    let dep_name = syn::Ident::new(&format!("__dep_{}", dep_index), field_name.span());
+                    let dep_name =
+                        syn::Ident::new(&format!("__dep_{}", dep_index), field_name.span());
                     dep_types.push(quote! { #field_type });
                     dep_names.push(dep_name.clone());
                     field_inits.push(quote! { #field_name: #dep_name });
@@ -403,7 +399,7 @@ pub fn derive_service(input: TokenStream) -> TokenStream {
                 } else {
                     return syn::Error::new_spanned(
                         field_type,
-                        "Fields marked with #[dep(optional)] must have type Option<Arc<T>>"
+                        "Fields marked with #[dep(optional)] must have type Option<Arc<T>>",
                     )
                     .to_compile_error()
                     .into();
@@ -498,19 +494,16 @@ pub fn derive_typed_require(input: TokenStream) -> TokenStream {
             _ => {
                 return syn::Error::new_spanned(
                     &input,
-                    "TypedRequire can only be derived for structs with named fields"
+                    "TypedRequire can only be derived for structs with named fields",
                 )
                 .to_compile_error()
                 .into();
             }
         },
         _ => {
-            return syn::Error::new_spanned(
-                &input,
-                "TypedRequire can only be derived for structs"
-            )
-            .to_compile_error()
-            .into();
+            return syn::Error::new_spanned(&input, "TypedRequire can only be derived for structs")
+                .to_compile_error()
+                .into();
         }
     };
 
@@ -527,7 +520,7 @@ pub fn derive_typed_require(input: TokenStream) -> TokenStream {
             } else {
                 return syn::Error::new_spanned(
                     field_type,
-                    "Fields marked with #[dep] must have type Arc<T>"
+                    "Fields marked with #[dep] must have type Arc<T>",
                 )
                 .to_compile_error()
                 .into();
@@ -538,7 +531,7 @@ pub fn derive_typed_require(input: TokenStream) -> TokenStream {
     // Build the type-level list: Has<T1, Has<T2, ... Has<Tn, Empty>>>
     let deps_type = inner_types.iter().rev().fold(
         quote! { ::dependency_injector::typed::Empty },
-        |acc, ty| quote! { ::dependency_injector::typed::Has<#ty, #acc> }
+        |acc, ty| quote! { ::dependency_injector::typed::Has<#ty, #acc> },
     );
 
     // Generate the implementation
